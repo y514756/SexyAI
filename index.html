@@ -5335,7 +5335,7 @@
                             systemInstruction: { parts: [{ text: systemPrompt }] },
                             contents,
                             tools: [{ googleSearch: {} }],
-                            generationConfig: { thinkingLevel: 'low' }
+                            generationConfig: { temperature: 0.85, topP: 0.95, topK: 40, maxOutputTokens: 300, responseMimeType: 'text/plain' }
                         }) }
                     );
                     if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).substring(0, 200)}`);
