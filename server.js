@@ -21,19 +21,8 @@ app.use(express.static(path.join(__dirname)));
 // ─────────────────────────────────────────
 // AUTH ENDPOINTS
 // ─────────────────────────────────────────
-app.post('/auth/signup', async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
-  const { data, error } = await supabase.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true
-  });
-  if (error) return res.status(400).json({ error: error.message });
-  // Sign them in immediately after signup
-  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-  if (signInError) return res.status(400).json({ error: signInError.message });
-  res.json({ token: signInData.session.access_token, user: signInData.user });
+app.post('/auth/signup', (req, res) => {
+  res.status(403).json({ error: 'Signup is disabled.' });
 });
 
 app.post('/auth/login', async (req, res) => {
