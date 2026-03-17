@@ -30,7 +30,15 @@ app.post('/auth/login', async (req, res) => {
   if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return res.status(400).json({ error: error.message });
-  res.json({ token: data.session.access_token, user: data.user });
+  res.json({ token: data.session.access_token, refresh_token: data.session.refresh_token, user: data.user });
+});
+
+app.post('/auth/refresh', async (req, res) => {
+  const { refresh_token } = req.body;
+  if (!refresh_token) return res.status(400).json({ error: 'Refresh token required' });
+  const { data, error } = await supabase.auth.refreshSession({ refresh_token });
+  if (error || !data.session) return res.status(401).json({ error: 'Refresh failed' });
+  res.json({ token: data.session.access_token, refresh_token: data.session.refresh_token });
 });
 
 app.post('/auth/logout', async (req, res) => {

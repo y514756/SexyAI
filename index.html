@@ -2524,16 +2524,38 @@
         // --- UTILS ---
         const $ = (id) => document.getElementById(id);
 
-        const apiCall = async (path, opts = {}) => {
+        const apiCall = async (path, opts = {}, _retried) => {
             const token = localStorage.getItem('cc_auth_token');
             const headers = { ...opts.headers };
             if (token) headers['Authorization'] = `Bearer ${token}`;
             const r = await fetch(path, { ...opts, headers });
+            if (r.status === 401 && !_retried) {
+                const refreshed = await tryRefreshToken();
+                if (refreshed) return apiCall(path, opts, true);
+                logout(); return;
+            }
             if (r.status === 401) { logout(); return; }
             const data = await r.json();
             if (data.error) throw new Error(data.error);
             return data;
         };
+
+        async function tryRefreshToken() {
+            const rt = localStorage.getItem('cc_refresh_token');
+            if (!rt) return false;
+            try {
+                const resp = await fetch('/auth/refresh', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ refresh_token: rt })
+                });
+                if (!resp.ok) return false;
+                const data = await resp.json();
+                localStorage.setItem('cc_auth_token', data.token);
+                localStorage.setItem('cc_refresh_token', data.refresh_token);
+                return true;
+            } catch { return false; }
+        }
         const api = {
             get: (path) => apiCall(path),
             post: (path, body) => apiCall(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
@@ -2575,6 +2597,7 @@
                 const data = await resp.json();
                 if (data.error) throw new Error(data.error);
                 localStorage.setItem('cc_auth_token', data.token);
+                localStorage.setItem('cc_refresh_token', data.refresh_token);
                 $('authScreen').style.display = 'none';
                 await loadFromServer();
                 bootApp();
@@ -2596,6 +2619,7 @@
                 }).catch(() => {});
             }
             localStorage.removeItem('cc_auth_token');
+            localStorage.removeItem('cc_refresh_token');
             $('authEmail').value = '';
             $('authPassword').value = '';
             $('authError').style.display = 'none';
@@ -6211,7 +6235,13 @@
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     if (resp.status === 401) {
-                        throw new Error('Token expired');
+                        const refreshed = await tryRefreshToken();
+                        if (!refreshed) throw new Error('Token expired');
+                        // Retry with new token
+                        const retry = await fetch('/api/companies', {
+                            headers: { 'Authorization': `Bearer ${localStorage.getItem('cc_auth_token')}` }
+                        });
+                        if (retry.status === 401) throw new Error('Token expired');
                     }
                     // Token is valid - hide auth screen and boot
                     $('authScreen').style.display = 'none';
