@@ -2664,15 +2664,15 @@
             }
 
             try {
-                const safeGet = (path) => api.get(path).catch(() => []);
+                const safeGet = (path) => api.get(path).catch((e) => { if (e.message === 'Session expired') throw e; return []; });
                 const todayDate = new Date().toISOString().split('T')[0];
                 const [companies, playbooks, tasks, logs, chat, tools, docs, chatSessions, events, ideas, contacts, recurringTasks, recurringCompletions] = await Promise.all([
-                    api.get('/api/companies'),
-                    api.get('/api/playbooks'),
-                    api.get('/api/tasks'),
-                    api.get('/api/logs'),
-                    api.get('/api/chat'),
-                    api.get('/api/tools'),
+                    safeGet('/api/companies'),
+                    safeGet('/api/playbooks'),
+                    safeGet('/api/tasks'),
+                    safeGet('/api/logs'),
+                    safeGet('/api/chat'),
+                    safeGet('/api/tools'),
                     safeGet('/api/docs'),
                     safeGet('/api/chat-sessions'),
                     safeGet('/api/events'),
@@ -2719,8 +2719,12 @@
                 logMissedRecurringTasks();
             } catch (err) {
                 console.error('Failed to load from server:', err);
-                $('chatStatus').innerText = 'DB Error — check server';
-                showToast('Could not reach server. Is it running?');
+                if (err.message === 'Session expired') {
+                    $('chatStatus').innerText = 'Session expired — please log in';
+                } else {
+                    $('chatStatus').innerText = 'DB Error — check server';
+                    showToast('Load error: ' + err.message);
+                }
             }
         }
 
