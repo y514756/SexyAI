@@ -2532,9 +2532,9 @@
             if (r.status === 401 && !_retried) {
                 const refreshed = await tryRefreshToken();
                 if (refreshed) return apiCall(path, opts, true);
-                logout(); return;
+                logout(); throw new Error('Session expired');
             }
-            if (r.status === 401) { logout(); return; }
+            if (r.status === 401) { logout(); throw new Error('Session expired'); }
             const data = await r.json();
             if (data.error) throw new Error(data.error);
             return data;
