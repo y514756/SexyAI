@@ -1519,6 +1519,45 @@
 </head>
 <body>
 
+    <!-- Auth Screen Overlay -->
+    <div id="authScreen" style="
+        position: fixed; inset: 0; z-index: 99999;
+        background: var(--bg);
+        display: flex; align-items: center; justify-content: center;
+        font-family: 'Outfit', sans-serif;
+    ">
+        <div style="
+            background: var(--surface); border: var(--border); border-radius: var(--radius);
+            padding: 40px; width: 380px; max-width: 90vw;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        ">
+            <h2 id="authTitle" style="font-size: 22px; font-weight: 700; margin-bottom: 6px; color: var(--text-primary);">Sign In</h2>
+            <p id="authSubtitle" style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px;">Welcome back to Command Center</p>
+            <div id="authError" style="display:none; background:rgba(239,68,68,0.12); color:#f87171; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:16px;"></div>
+            <label style="display:block; font-size:13px; color:var(--text-muted); margin-bottom:6px;">Email</label>
+            <input id="authEmail" type="email" placeholder="you@example.com" style="
+                width:100%; padding:10px 14px; border-radius:8px; border:1px solid #2A2A38;
+                background:var(--surface-inset); color:var(--text-primary); font-family:'Outfit',sans-serif;
+                font-size:14px; outline:none; margin-bottom:14px; transition:border 0.2s;
+            " onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='#2A2A38'">
+            <label style="display:block; font-size:13px; color:var(--text-muted); margin-bottom:6px;">Password</label>
+            <input id="authPassword" type="password" placeholder="Your password" style="
+                width:100%; padding:10px 14px; border-radius:8px; border:1px solid #2A2A38;
+                background:var(--surface-inset); color:var(--text-primary); font-family:'Outfit',sans-serif;
+                font-size:14px; outline:none; margin-bottom:20px; transition:border 0.2s;
+            " onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='#2A2A38'">
+            <button id="authSubmit" onclick="handleAuth()" style="
+                width:100%; padding:11px; border:none; border-radius:8px;
+                background:var(--accent); color:#fff; font-family:'Outfit',sans-serif;
+                font-size:14px; font-weight:600; cursor:pointer; transition:opacity 0.2s;
+            " onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Sign In</button>
+            <p style="text-align:center; margin-top:16px; font-size:13px; color:var(--text-muted);">
+                <span id="authToggleText">Don't have an account?</span>
+                <a id="authToggleLink" href="#" onclick="toggleAuthMode(event)" style="color:var(--accent); text-decoration:none; margin-left:4px;">Create Account</a>
+            </p>
+        </div>
+    </div>
+
     <div class="app-loader" id="appLoader">
         <div class="app-loader-spinner"></div>
         <div class="app-loader-text">Loading workspace...</div>
@@ -1540,6 +1579,7 @@
         </div>
         <div class="nav-icon" id="openSearch" title="Search (⌘K)"><i class="fa-solid fa-magnifying-glass"></i></div>
         <div class="nav-icon" id="openSettings" title="Settings" style="margin-top: auto;"><i class="fa-solid fa-gear"></i></div>
+        <div class="nav-icon" id="btnLogout" title="Logout" onclick="logout()" style="margin-top: 4px; margin-bottom: 8px;"><i class="fa-solid fa-right-from-bracket"></i></div>
     </div>
 
     <div class="sidebar collapsed" id="sidebar">
@@ -2484,8 +2524,12 @@
         // --- UTILS ---
         const $ = (id) => document.getElementById(id);
 
-        const apiCall = async (path, opts) => {
-            const r = await fetch(path, opts);
+        const apiCall = async (path, opts = {}) => {
+            const token = localStorage.getItem('cc_auth_token');
+            const headers = { ...opts.headers };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            const r = await fetch(path, { ...opts, headers });
+            if (r.status === 401) { logout(); return; }
             const data = await r.json();
             if (data.error) throw new Error(data.error);
             return data;
@@ -2496,6 +2540,67 @@
             patch: (path, body) => apiCall(path, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
             del: (path) => apiCall(path, { method: 'DELETE' }),
         };
+
+        // --- AUTH FUNCTIONS ---
+        let authMode = 'login';
+
+        function toggleAuthMode(e) {
+            e.preventDefault();
+            authMode = authMode === 'login' ? 'signup' : 'login';
+            $('authTitle').textContent = authMode === 'login' ? 'Sign In' : 'Create Account';
+            $('authSubtitle').textContent = authMode === 'login' ? 'Welcome back to Command Center' : 'Set up your account';
+            $('authSubmit').textContent = authMode === 'login' ? 'Sign In' : 'Create Account';
+            $('authToggleText').textContent = authMode === 'login' ? "Don't have an account?" : 'Already have an account?';
+            $('authToggleLink').textContent = authMode === 'login' ? 'Create Account' : 'Sign In';
+            $('authError').style.display = 'none';
+        }
+
+        async function handleAuth() {
+            const email = $('authEmail').value.trim();
+            const password = $('authPassword').value;
+            if (!email || !password) {
+                $('authError').textContent = 'Please enter email and password';
+                $('authError').style.display = 'block';
+                return;
+            }
+            $('authSubmit').disabled = true;
+            $('authSubmit').textContent = 'Loading...';
+            try {
+                const endpoint = authMode === 'login' ? '/auth/login' : '/auth/signup';
+                const resp = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await resp.json();
+                if (data.error) throw new Error(data.error);
+                localStorage.setItem('cc_auth_token', data.token);
+                $('authScreen').style.display = 'none';
+                await loadFromServer();
+                bootApp();
+            } catch (err) {
+                $('authError').textContent = err.message;
+                $('authError').style.display = 'block';
+            } finally {
+                $('authSubmit').disabled = false;
+                $('authSubmit').textContent = authMode === 'login' ? 'Sign In' : 'Create Account';
+            }
+        }
+
+        function logout() {
+            const token = localStorage.getItem('cc_auth_token');
+            if (token) {
+                fetch('/auth/logout', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).catch(() => {});
+            }
+            localStorage.removeItem('cc_auth_token');
+            $('authEmail').value = '';
+            $('authPassword').value = '';
+            $('authError').style.display = 'none';
+            $('authScreen').style.display = 'flex';
+        }
 
         const showToast = (msg) => {
             const t = $('toast');
@@ -5900,11 +6005,7 @@
             localStorage.setItem('cc_chat_closed', show ? '' : '1');
         };
 
-        window.onload = async () => {
-            localStorage.setItem('cc_api_key', 'AIzaSyBPlSd1FnXifpF_PyctM_8npZYr-_ZS6ZY');
-
-            await loadFromServer();
-
+        async function bootApp() {
             // Restore chat panel state
             if (localStorage.getItem('cc_chat_closed') === '1') {
                 toggleChatPanel(false);
@@ -6095,6 +6196,54 @@
 
             const logoPath = "logo.png";
             $('appLogo').src = logoPath;
+        }
+
+        window.onload = async () => {
+            localStorage.setItem('cc_api_key', 'AIzaSyBPlSd1FnXifpF_PyctM_8npZYr-_ZS6ZY');
+
+            const token = localStorage.getItem('cc_auth_token');
+            if (token) {
+                try {
+                    // Validate existing token with a lightweight API call
+                    const resp = await fetch('/api/companies', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (resp.status === 401) {
+                        throw new Error('Token expired');
+                    }
+                    // Token is valid - hide auth screen and boot
+                    $('authScreen').style.display = 'none';
+                    await loadFromServer();
+                    bootApp();
+                } catch (e) {
+                    // Token invalid - clear it and show login
+                    localStorage.removeItem('cc_auth_token');
+                    $('authScreen').style.display = 'flex';
+                    // Dismiss loader
+                    const loader = $('appLoader');
+                    if (loader) {
+                        loader.classList.add('fade-out');
+                        setTimeout(() => loader.remove(), 400);
+                    }
+                }
+            } else {
+                // No token - show login screen
+                $('authScreen').style.display = 'flex';
+                // Dismiss loader
+                const loader = $('appLoader');
+                if (loader) {
+                    loader.classList.add('fade-out');
+                    setTimeout(() => loader.remove(), 400);
+                }
+            }
+
+            // Allow Enter key to submit auth form
+            $('authPassword').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') handleAuth();
+            });
+            $('authEmail').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') $('authPassword').focus();
+            });
         };
     </script>
 </body>
