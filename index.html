@@ -1686,7 +1686,7 @@
             <div class="agenda-stats" id="agendaStats"></div>
             <div class="progress-bar"><div class="progress-fill" id="agendaProgress"></div></div>
             <div class="agenda-input-row">
-                <input type="text" id="taskInput" placeholder="What needs to happen next?">
+                <input type="text" id="taskInput" placeholder="What needs to happen next?" onkeydown="if(event.key==='Enter'){event.preventDefault();addTask(this.value,$('taskPriority').value);this.value='';}">
                 <select id="taskPriority">
                     <option value="normal">Normal</option>
                     <option value="high">High</option>

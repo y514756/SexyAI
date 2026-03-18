@@ -59,6 +59,59 @@ app.post('/auth/logout', async (req, res) => {
 });
 
 // ─────────────────────────────────────────
+// ICAL FEED (before auth — accessed by Apple Calendar)
+// ─────────────────────────────────────────
+app.get('/calendar/feed.ics', async (req, res) => {
+  const token = req.query.token;
+  if (!token || token !== process.env.CALENDAR_FEED_TOKEN) {
+    return res.status(403).send('Invalid token');
+  }
+  const { data: events, error } = await supabase
+    .from('calendar_events')
+    .select('*')
+    .order('date');
+  if (error) return res.status(500).send('Error fetching events');
+
+  const icsEvents = (events || []).map(e => {
+    const dtStart = e.time
+      ? `DTSTART:${e.date.replace(/-/g, '')}T${e.time.replace(/:/g, '')}00`
+      : `DTSTART;VALUE=DATE:${e.date.replace(/-/g, '')}`;
+    const dtEnd = e.end_time
+      ? `DTEND:${e.date.replace(/-/g, '')}T${e.end_time.replace(/:/g, '')}00`
+      : e.time
+        ? `DTEND:${e.date.replace(/-/g, '')}T${String(parseInt(e.time.split(':')[0]) + 1).padStart(2, '0')}${e.time.split(':')[1]}00`
+        : '';
+    const desc = (e.description || '').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+    return [
+      'BEGIN:VEVENT',
+      `UID:${e.id}@sexyai`,
+      dtStart,
+      dtEnd,
+      `SUMMARY:${(e.title || '').replace(/,/g, '\\,').replace(/;/g, '\\;')}`,
+      desc ? `DESCRIPTION:${desc}` : '',
+      `DTSTAMP:${new Date(e.created_at).toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
+      'END:VEVENT'
+    ].filter(Boolean).join('\r\n');
+  }).join('\r\n');
+
+  const ical = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//SexyAI//Command Center//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'X-WR-CALNAME:SexyAI Calendar',
+    'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+    icsEvents,
+    'END:VCALENDAR'
+  ].join('\r\n');
+
+  res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+  res.setHeader('Content-Disposition', 'inline; filename="feed.ics"');
+  res.send(ical);
+});
+
+// ─────────────────────────────────────────
 // AUTH MIDDLEWARE (protects all /api/* routes)
 // ─────────────────────────────────────────
 app.use('/api', async (req, res, next) => {
