@@ -1545,6 +1545,88 @@
             .crm-pb-header, .crm-pb-row { grid-template-columns: 2fr 100px 120px 140px; }
             .crm-pb-header > *:nth-child(n+5), .crm-pb-row > *:nth-child(n+5) { display: none; }
         }
+        /* --- SCRATCH PAD --- */
+        .scratchpad-view {
+            display: flex; flex-direction: column; height: 100%; font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+        }
+        .scratch-feed {
+            flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column;
+        }
+        .scratch-feed-inner {
+            display: flex; flex-direction: column;
+        }
+        .scratch-day-sep {
+            text-align: center; padding: 20px 0 10px; color: var(--text-muted); font-size: 11px;
+            letter-spacing: 1.5px; font-weight: 700; text-transform: uppercase;
+            display: flex; align-items: center; gap: 16px;
+        }
+        .scratch-day-sep::before, .scratch-day-sep::after {
+            content: ''; flex: 1; height: 1px; background: var(--surface-elevated);
+        }
+        .scratch-entry {
+            display: flex; align-items: flex-start; gap: 14px; padding: 10px 12px;
+            border-radius: 8px; transition: background 0.15s; margin: 2px 0;
+        }
+        .scratch-entry:hover { background: var(--surface-inset); }
+        .scratch-entry:hover .scratch-action { opacity: 1; }
+        .scratch-time {
+            color: var(--accent); font-size: 12px; flex-shrink: 0; min-width: 44px;
+            padding-top: 3px; font-weight: 600; opacity: 0.7;
+        }
+        .scratch-content {
+            flex: 1; font-size: 14px; color: var(--text-primary);
+            word-break: break-word; line-height: 1.65; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        .scratch-content strong { font-weight: 700; }
+        .scratch-content em { font-style: italic; }
+        .scratch-content br + br { display: block; content: ''; margin-top: 6px; }
+        .scratch-bullet {
+            display: flex; gap: 8px; align-items: baseline; margin: 3px 0; padding-left: 2px;
+        }
+        .scratch-bullet-dot {
+            color: var(--accent); flex-shrink: 0; font-size: 14px; line-height: 1;
+        }
+        .scratch-bullet-num {
+            color: var(--accent); flex-shrink: 0; font-weight: 600; font-size: 13px; min-width: 20px;
+        }
+        .scratch-action {
+            opacity: 0; background: none; border: none; color: var(--text-muted); cursor: pointer;
+            padding: 4px 8px; font-size: 13px; flex-shrink: 0; transition: opacity 0.15s, color 0.15s;
+            border-radius: 4px;
+        }
+        .scratch-copy:hover { color: var(--accent); background: rgba(99,102,241,0.1); }
+        .scratch-delete:hover { color: var(--danger, #ef4444); background: rgba(239,68,68,0.1); }
+        .scratch-content[onclick] { cursor: text; }
+        .scratch-edit-area {
+            width: 100%; background: var(--surface-inset); border: 1px solid var(--accent); border-radius: 6px;
+            padding: 8px 10px; color: var(--text-primary); font-size: 14px; resize: none;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            line-height: 1.65; min-height: 38px;
+        }
+        .scratch-edit-area:focus { outline: none; }
+        .scratch-edit-hint {
+            font-size: 11px; color: var(--text-muted); margin-top: 4px; padding-left: 2px;
+        }
+        .scratch-input-bar {
+            display: flex; align-items: flex-end; gap: 8px; padding: 12px 24px 16px;
+            border-top: var(--border); background: var(--surface);
+        }
+        .scratch-prompt {
+            color: var(--accent); font-size: 16px; font-weight: 700; padding: 8px 0;
+            font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+        }
+        .scratch-input-bar textarea {
+            flex: 1; background: var(--surface-inset); border: var(--border); border-radius: 8px;
+            padding: 8px 12px; color: var(--text-primary); font-size: 14px; resize: none;
+            font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+            line-height: 1.5; min-height: 38px; max-height: 120px;
+        }
+        .scratch-input-bar textarea::placeholder { color: var(--text-muted); }
+        .scratch-input-bar textarea:focus { outline: none; border-color: var(--accent); }
+        .scratch-empty {
+            text-align: center; padding: 60px 20px; color: var(--text-secondary);
+        }
+        .scratch-empty i { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }
     </style>
 </head>
 <body>
@@ -1599,7 +1681,7 @@
             <img src="https://via.placeholder.com/32" id="appLogo" alt="AI CC">
         </div>
         <div class="nav-icons">
-            <div class="nav-icon active" data-view="dashboard" title="Dashboard"><i class="fa-solid fa-gauge-high"></i></div>
+            <div class="nav-icon" id="btnWorkstations" title="Workstations"><i class="fa-solid fa-layer-group"></i></div>
             <div class="nav-icon" data-view="playbooks" title="Playbooks"><i class="fa-solid fa-book"></i></div>
             <div class="nav-icon" data-view="logs" title="Work Log"><i class="fa-solid fa-scroll"></i></div>
             <div class="nav-icon" data-view="tools" title="Tool Stack"><i class="fa-solid fa-toolbox"></i></div>
@@ -1608,6 +1690,7 @@
             <div class="nav-icon" data-view="ideas" title="Product Board"><i class="fa-solid fa-lightbulb"></i></div>
             <div class="nav-icon" data-view="crm" title="CRM"><i class="fa-solid fa-address-book"></i></div>
             <div class="nav-icon" data-view="radar" title="Nightlife Radar"><i class="fa-solid fa-satellite-dish"></i></div>
+            <div class="nav-icon" data-view="scratchpad" title="Scratch Pad"><i class="fa-solid fa-terminal"></i></div>
         </div>
         <div class="nav-icon" id="openSearch" title="Search (⌘K)"><i class="fa-solid fa-magnifying-glass"></i></div>
         <div class="nav-icon" id="openSettings" title="Settings" style="margin-top: auto;"><i class="fa-solid fa-gear"></i></div>
@@ -1677,7 +1760,14 @@
 
         <section class="agenda-container">
             <div class="agenda-header">
-                <h3 style="font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Agenda</h3>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <h3 style="font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Agenda</h3>
+                    <span style="width: 1px; height: 14px; background: var(--text-dim); opacity: 0.3;"></span>
+                    <span id="workstationIndicator" style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer;" onclick="$('sidebar').classList.toggle('collapsed')">
+                        <span id="wsIndicatorDot" style="width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0;"></span>
+                        <span id="wsIndicatorLabel">All workstations</span>
+                    </span>
+                </div>
                 <div style="display: flex; gap: 6px; align-items: center;">
                     <button class="btn-chat-action" onclick="openRecurringTasksModal()" title="Manage recurring tasks"><i class="fa-solid fa-rotate" style="font-size: 11px;"></i></button>
                     <button class="btn-chat-action" id="btnClearDone"><i class="fa-solid fa-broom" style="font-size: 11px;"></i> Clear Done</button>
@@ -1712,8 +1802,8 @@
                 <i class="fa-solid fa-times" style="cursor: pointer;" onclick="closeModal('settingsModal')"></i>
             </div>
             <div class="modal-body">
-                <div class="form-group" style="padding: 10px; background: var(--surface); border-radius: 8px; margin-bottom: 12px;">
-                    <span style="color: var(--text-secondary); font-size: 13px;"><i class="fa-solid fa-check-circle" style="color: #4285F4; margin-right: 6px;"></i>Gemini — server-side (no key needed)</span>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label><span class="tab-dot" style="background: #4285F4; display: inline-block; width: 6px; height: 6px; border-radius: 50%; vertical-align: middle; margin-right: 6px;"></span>Gemini — server-side (no key needed)</label>
                 </div>
                 <div class="form-group">
                     <label><span class="tab-dot" style="background: #10B981; display: inline-block; width: 6px; height: 6px; border-radius: 50%; vertical-align: middle; margin-right: 6px;"></span>OpenAI API Key</label>
@@ -1736,10 +1826,22 @@
                         <span id="fontSizeLabel" style="font-size: 12px; color: var(--text-secondary); min-width: 32px; text-align: center;">14px</span>
                     </div>
                 </div>
+                <div style="border-top: 1px solid var(--border); margin-top: 8px; padding-top: 14px;">
+                    <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 10px; display: block;"><i class="fa-solid fa-database" style="margin-right: 6px;"></i>Backup & Restore</label>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn-chat-action" id="btnExportBackup" style="flex: 1;"><i class="fa-solid fa-download" style="margin-right: 4px;"></i>Export Backup</button>
+                        <label class="btn-chat-action" style="flex: 1; cursor: pointer; text-align: center; margin: 0;">
+                            <i class="fa-solid fa-upload" style="margin-right: 4px;"></i>Import Backup
+                            <input type="file" id="importBackupFile" accept=".json" style="display: none;">
+                        </label>
+                    </div>
+                </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn-chat-action" style="background: #EF4444; color: white;" id="btnResetData">Reset All Data</button>
+            <div class="modal-footer" style="justify-content: flex-end;">
                 <button class="btn-send" id="btnSaveSettings">Save Changes</button>
+            </div>
+            <div style="border-top: 1px solid var(--border); padding: 10px 24px; text-align: center;">
+                <button id="btnResetData" style="background: none; border: none; color: var(--text-dim); font-size: 11px; cursor: pointer; opacity: 0.5; padding: 4px 8px;">Reset All Data</button>
             </div>
         </div>
     </div>
@@ -2360,6 +2462,21 @@
                         </datalist>
                     </div>
                 </div>
+                <div style="display: flex; gap: 12px;">
+                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                        <label>Cost</label>
+                        <input type="number" id="toolCostInput" placeholder="e.g. 29.99" min="0" step="0.01">
+                    </div>
+                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                        <label>Billing Period</label>
+                        <select id="toolCostPeriodInput">
+                            <option value="monthly">Monthly</option>
+                            <option value="yearly">Yearly</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="one-time">One-time</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="form-group" style="margin-bottom: 0;">
                     <label>Description</label>
                     <div class="doc-editor-wrap">
@@ -2452,7 +2569,7 @@
             <div class="search-results" id="globalSearchResults">
                 <div class="search-results-empty">
                     <i class="fa-solid fa-magnifying-glass"></i>
-                    Type to search across playbooks, docs, ideas, tools, logs, events...
+                    Type to search across everything...
                 </div>
             </div>
         </div>
@@ -2503,7 +2620,8 @@
             recurringCompletions: [],
             plannerWeekOffset: 0,
             radarUpdates: [],
-            radarPrompts: []
+            radarPrompts: [],
+            scratches: []
         };
 
         const SEED_PLAYBOOKS = [
@@ -2723,7 +2841,7 @@
             try {
                 const safeGet = (path) => api.get(path).catch((e) => { if (e.message === 'Session expired') throw e; return []; });
                 const todayDate = new Date().toISOString().split('T')[0];
-                const [companies, playbooks, tasks, logs, chat, tools, docs, chatSessions, events, ideas, contacts, recurringTasks, recurringCompletions, radarUpdates, radarPrompts] = await Promise.all([
+                const [companies, playbooks, tasks, logs, chat, tools, docs, chatSessions, events, ideas, contacts, recurringTasks, recurringCompletions, radarUpdates, radarPrompts, scratches] = await Promise.all([
                     safeGet('/api/companies'),
                     safeGet('/api/playbooks'),
                     safeGet('/api/tasks'),
@@ -2738,7 +2856,8 @@
                     safeGet('/api/recurring-tasks'),
                     safeGet(`/api/recurring-completions?date=${todayDate}`),
                     safeGet('/api/radar'),
-                    safeGet('/api/radar/prompts')
+                    safeGet('/api/radar/prompts'),
+                    safeGet('/api/scratches')
                 ]);
 
                 // Seed defaults if DB is empty
@@ -2775,6 +2894,7 @@
                 state.recurringCompletions = recurringCompletions;
                 state.radarUpdates = radarUpdates;
                 state.radarPrompts = radarPrompts;
+                state.scratches = scratches;
 
                 $('chatStatus').innerText = 'Online — DB connected';
                 logMissedRecurringTasks();
@@ -2807,7 +2927,6 @@
                         <div class="dot" style="background: ${c.color}"></div>
                         <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${c.name}</span>
                         <i class="fa-solid fa-pen" style="font-size: 11px; color: var(--text-dim); opacity: 0; transition: var(--transition); cursor: pointer; padding: 2px 4px;" data-edit-ws="${c.id}" title="Edit workstation"></i>
-                        <span style="font-size: 12px; opacity: 0.5;">${count}</span>
                     </div>
                 `;
             });
@@ -2848,6 +2967,13 @@
                     renderCRM();
                 };
             });
+
+            // Update workstation indicator
+            const comp = state.selectedCompany === 'All workstations'
+                ? null
+                : state.companies.find(c => c.name === state.selectedCompany);
+            $('wsIndicatorLabel').textContent = state.selectedCompany;
+            $('wsIndicatorDot').style.background = comp ? comp.color : 'var(--accent)';
         };
 
         // --- DAILY PLANNER (Recurring Checklist) ---
@@ -3348,6 +3474,16 @@
             }
         };
 
+        const getMonthlyRate = (cost, period) => {
+            if (!cost || cost <= 0) return 0;
+            switch (period) {
+                case 'yearly': return cost / 12;
+                case 'weekly': return cost * 4.33;
+                case 'one-time': return 0;
+                default: return cost;
+            }
+        };
+
         const renderTools = () => {
             if (state.view !== 'tools') return;
             const view = $('dynamicView');
@@ -3360,12 +3496,42 @@
                 categories[cat].push(tool);
             });
 
+            // Cost summary
+            let totalMonthly = 0;
+            let toolsWithCost = 0;
+            let oneTimeTotalCost = 0;
+            const catCosts = {};
+            state.tools.forEach(tool => {
+                const monthly = getMonthlyRate(tool.cost, tool.cost_period);
+                if (monthly > 0) { totalMonthly += monthly; toolsWithCost++; }
+                if (tool.cost && tool.cost_period === 'one-time') oneTimeTotalCost += tool.cost;
+                const cat = tool.category || 'Uncategorized';
+                catCosts[cat] = (catCosts[cat] || 0) + monthly;
+            });
+
             let html = `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                     <h1 style="font-size: 24px; font-weight: 700;">Tool Stack</h1>
                     <button class="btn-send" onclick="openToolEditor()">+ Add Tool</button>
                 </div>
             `;
+
+            if (state.tools.length > 0) {
+                const catBreakdown = Object.entries(catCosts)
+                    .filter(([, v]) => v > 0)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([cat, v]) => `${cat === 'Uncategorized' ? 'Other' : cat}: $${v.toFixed(2)}/mo`)
+                    .join('  |  ');
+                html += `
+                    <div style="background: var(--surface-elevated); border-radius: 10px; padding: 14px 18px; margin-bottom: 24px; border: 1px solid var(--border);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                            <span style="font-weight: 600; color: var(--text-primary); font-size: 15px;">$${totalMonthly.toFixed(2)}/mo across ${toolsWithCost} tool${toolsWithCost !== 1 ? 's' : ''}</span>
+                            ${oneTimeTotalCost > 0 ? `<span style="font-size: 12px; color: var(--text-dim);">+ $${oneTimeTotalCost.toFixed(2)} one-time</span>` : ''}
+                        </div>
+                        ${catBreakdown ? `<div style="font-size: 12px; color: var(--text-muted); margin-top: 6px;">${catBreakdown}</div>` : ''}
+                    </div>
+                `;
+            }
 
             const catKeys = Object.keys(categories).sort();
             if (catKeys.length === 0) {
@@ -3385,6 +3551,9 @@
                     let hostname = '';
                     try { hostname = new URL(tool.url).hostname; } catch(e) { hostname = tool.url; }
                     const desc = (tool.description || '').replace(/<[^>]*>/g, '').substring(0, 80);
+                    const periodLabels = { monthly: '/mo', yearly: '/yr', weekly: '/wk', 'one-time': ' one-time' };
+                    const costLabel = tool.cost ? `$${Number(tool.cost).toFixed(2)}${periodLabels[tool.cost_period] || '/mo'}` : 'Free';
+                    const costColor = tool.cost ? 'var(--text-primary)' : 'var(--text-dim)';
                     html += `
                         <div class="playbook-card" style="margin-bottom: 0; padding: 16px; cursor: pointer;" onclick="openToolEditor('${tool.id}')">
                             <div style="display: flex; align-items: flex-start; gap: 12px;">
@@ -3394,6 +3563,7 @@
                                 <div style="flex: 1; min-width: 0;">
                                     <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 2px;">${tool.name}</div>
                                     <div style="font-size: 12px; color: var(--accent); margin-bottom: 4px;">${hostname}</div>
+                                    <div style="font-size: 12px; color: ${costColor}; margin-bottom: 4px; font-weight: 500;">${costLabel}</div>
                                     ${desc ? `<div style="font-size: 13px; color: var(--text-muted); line-height: 1.4;">${desc}</div>` : ''}
                                 </div>
                                 <a href="${tool.url}" target="_blank" onclick="event.stopPropagation();" style="color: var(--text-dim); font-size: 14px; padding: 4px;" title="Open link">
@@ -4301,6 +4471,7 @@
                 }
 
                 renderIdeas();
+                renderAgenda();
                 showToast(`Moved to ${newStatus}`);
             } catch (err) {
                 showToast('Failed to move: ' + err.message);
@@ -4996,9 +5167,14 @@
                 return { ...rt, done: !!completion, completionId: completion ? completion.id : null, isRecurring: true };
             });
 
+            const actionableIdeas = state.ideas
+                .filter(i => i.status === 'actionable')
+                .map(i => ({ id: i.id, text: i.title, priority: 'normal', done: false, isRecurring: false, isIdea: true, company: i.company }));
+
             const allTasks = [
-                ...state.tasks.map(t => ({ ...t, isRecurring: false })),
-                ...todayRecurring
+                ...state.tasks.map(t => ({ ...t, isRecurring: false, isIdea: false })),
+                ...todayRecurring,
+                ...actionableIdeas
             ];
 
             const total = allTasks.length;
@@ -5026,6 +5202,17 @@
             }
 
             list.innerHTML = sorted.map(t => {
+                if (t.isIdea) {
+                    return `
+                <div class="task-item">
+                    <input type="checkbox" class="task-check" onchange="completeActionableIdea('${t.id}')">
+                    <div class="task-priority-dot normal"></div>
+                    <div class="task-content" style="flex:1;min-width:0;">
+                        <div class="task-text">${t.text}</div>
+                        <div style="font-size:12px;color:#10B981;font-weight:600;opacity:0.6;margin-top:2px;display:flex;align-items:center;gap:4px;"><i class="fa-solid fa-rocket" style="font-size:10px;"></i>Actionable${t.company ? ' — ' + t.company : ''}</div>
+                    </div>
+                </div>`;
+                }
                 if (t.isRecurring) {
                     return `
                 <div class="task-item recurring ${t.done ? 'done' : ''}">
@@ -5047,6 +5234,25 @@
                     <i class="fa-solid fa-trash task-delete" onclick="deleteTask('${t.id}')"></i>
                 </div>`;
             }).join('');
+        };
+
+        const completeActionableIdea = async (id) => {
+            const idea = state.ideas.find(i => i.id === id);
+            if (!idea) return;
+            try {
+                const updated = await api.patch(`/api/ideas/${id}`, { status: 'done' });
+                const idx = state.ideas.findIndex(i => i.id === id);
+                if (idx !== -1) state.ideas[idx] = { ...state.ideas[idx], ...updated };
+                const projectLabel = idea.project ? ` [${idea.project}${idea.version ? ' ' + idea.version : ''}]` : '';
+                const suffix = idea.company ? ' — ' + idea.company : '';
+                const log = await api.post('/api/logs', { content: `Completed: <strong>${idea.title}</strong>${projectLabel}${suffix}`, timestamp: Date.now(), agent: 'product-board' });
+                state.logs.push(log);
+                renderAgenda();
+                renderIdeas();
+                showToast('Idea completed');
+            } catch (err) {
+                showToast('Failed to complete idea');
+            }
         };
 
         const editTaskInline = (id, el) => {
@@ -5536,6 +5742,8 @@
             $('toolCategoryInput').value = tool ? (tool.category || '') : '';
             $('toolIconInput').value = tool ? (tool.icon || '') : '';
             $('toolDescInput').innerHTML = tool ? (tool.description || '') : '';
+            $('toolCostInput').value = tool ? (tool.cost || '') : '';
+            $('toolCostPeriodInput').value = tool ? (tool.cost_period || 'monthly') : 'monthly';
             $('toolDeleteBtn').style.display = tool ? '' : 'none';
             openModal('toolEditorModal');
         };
@@ -5548,7 +5756,9 @@
                 url: $('toolUrlInput').value.trim() || '',
                 category: $('toolCategoryInput').value.trim() || '',
                 icon: $('toolIconInput').value.trim() || '',
-                description: $('toolDescInput').innerHTML
+                description: $('toolDescInput').innerHTML,
+                cost: parseFloat($('toolCostInput').value) || null,
+                cost_period: $('toolCostPeriodInput').value
             };
             try {
                 if (editingTool) {
@@ -6208,12 +6418,171 @@
             }
         }
 
+        // --- SCRATCH PAD VIEW ---
+        function formatScratch(text) {
+            return text
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                // URLs → clickable links
+                .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;word-break:break-all;">$1</a>')
+                // Bold
+                .replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--text-primary);font-weight:700;">$1</strong>')
+                // Italic
+                .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em style="color:var(--text-secondary);font-style:italic;">$1</em>')
+                // Inline code
+                .replace(/`([^`]+)`/g, '<code style="background:rgba(99,102,241,0.15);padding:2px 6px;border-radius:4px;font-size:12px;font-family:\'SF Mono\',\'Fira Code\',monospace;">$1</code>')
+                // Bullet lines: - or •
+                .replace(/^[-•]\s+(.+)$/gm, '<div class="scratch-bullet"><span class="scratch-bullet-dot">•</span><span>$1</span></div>')
+                // Numbered lists
+                .replace(/^(\d+)[.)]\s+(.+)$/gm, '<div class="scratch-bullet"><span class="scratch-bullet-num">$1.</span><span>$2</span></div>')
+                // Newlines (but not after bullet divs)
+                .replace(/\n(?!<div)/g, '<br>');
+        }
+
+        function renderScratchPad() {
+            const view = $('dynamicView');
+            const entries = state.scratches || [];
+
+            // Group by day
+            const grouped = {};
+            entries.forEach(e => {
+                const d = new Date(e.created_at);
+                const key = d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+                if (!grouped[key]) grouped[key] = [];
+                grouped[key].push(e);
+            });
+
+            // Sort days ascending (oldest first), entries within each day ascending
+            const sortedDays = Object.keys(grouped).sort((a, b) => new Date(a) - new Date(b));
+
+            let feedHTML = '';
+            if (entries.length === 0) {
+                feedHTML = `<div class="scratch-empty">
+                    <i class="fa-solid fa-terminal"></i>
+                    <p style="font-size: 15px;">No scratches yet.</p>
+                    <p style="font-size: 13px; margin-top: 8px;">Type below and hit Enter to dump your first thought.</p>
+                </div>`;
+            } else {
+                sortedDays.forEach(day => {
+                    feedHTML += `<div class="scratch-day-sep">--- ${day} ---</div>`;
+                    const dayEntries = grouped[day].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+                    dayEntries.forEach(e => {
+                        const t = new Date(e.created_at);
+                        const time = t.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+                        const formatted = formatScratch(e.content);
+                        const escapedContent = e.content.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+                        feedHTML += `<div class="scratch-entry" id="scratch-${e.id}">
+                            <span class="scratch-time">${time}</span>
+                            <span class="scratch-content" onclick="editScratch('${e.id}')" title="Click to edit">${formatted}</span>
+                            <button class="scratch-action scratch-copy" onclick="copyScratch('${e.id}')" title="Copy"><i class="fa-solid fa-copy"></i></button>
+                            <button class="scratch-action scratch-delete" onclick="deleteScratch('${e.id}')" title="Delete">&times;</button>
+                        </div>`;
+                    });
+                });
+            }
+
+            view.innerHTML = `<div class="scratchpad-view">
+                <div class="scratch-feed" id="scratchFeed">
+                    <div class="scratch-feed-inner">${feedHTML}</div>
+                </div>
+                <div class="scratch-input-bar">
+                    <span class="scratch-prompt">&gt;</span>
+                    <textarea id="scratchInput" rows="1" placeholder="dump it here... (Enter to add, Shift+Enter for newline)"></textarea>
+                </div>
+            </div>`;
+
+            const textarea = $('scratchInput');
+            textarea.addEventListener('keydown', async (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    const content = textarea.value.trim();
+                    if (!content) return;
+                    textarea.value = '';
+                    textarea.style.height = 'auto';
+                    try {
+                        const created = await api.post('/api/scratches', { content });
+                        state.scratches.unshift(created);
+                        renderScratchPad();
+                        setTimeout(() => {
+                            const feed = $('scratchFeed');
+                            if (feed) feed.scrollTop = feed.scrollHeight;
+                        }, 50);
+                    } catch (err) {
+                        showToast('Failed to save scratch');
+                    }
+                }
+            });
+            // Auto-resize textarea
+            textarea.addEventListener('input', () => {
+                textarea.style.height = 'auto';
+                textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+            });
+            textarea.focus();
+            // Scroll feed to bottom so newest entries are visible
+            const feed = $('scratchFeed');
+            if (feed) feed.scrollTop = feed.scrollHeight;
+        }
+
+        function editScratch(id) {
+            const scratch = state.scratches.find(s => s.id === id);
+            if (!scratch) return;
+            const entry = document.getElementById('scratch-' + id);
+            if (!entry) return;
+            const contentEl = entry.querySelector('.scratch-content');
+            const raw = scratch.content;
+            contentEl.innerHTML = `<textarea class="scratch-edit-area" id="scratchEdit-${id}">${raw.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+                <div class="scratch-edit-hint">Enter to save · Escape to cancel</div>`;
+            const ta = document.getElementById('scratchEdit-' + id);
+            ta.style.height = ta.scrollHeight + 'px';
+            ta.focus();
+            ta.selectionStart = ta.selectionEnd = ta.value.length;
+            ta.addEventListener('keydown', async (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    const content = ta.value.trim();
+                    if (!content) return;
+                    try {
+                        const updated = await api.patch('/api/scratches/' + id, { content });
+                        const idx = state.scratches.findIndex(s => s.id === id);
+                        if (idx !== -1) state.scratches[idx] = { ...state.scratches[idx], ...updated };
+                        renderScratchPad();
+                    } catch (err) {
+                        showToast('Failed to update scratch');
+                    }
+                } else if (e.key === 'Escape') {
+                    renderScratchPad();
+                }
+            });
+            ta.addEventListener('input', () => {
+                ta.style.height = 'auto';
+                ta.style.height = ta.scrollHeight + 'px';
+            });
+        }
+
+        function copyScratch(id) {
+            const scratch = state.scratches.find(s => s.id === id);
+            if (!scratch) return;
+            navigator.clipboard.writeText(scratch.content).then(() => {
+                const btn = document.querySelector(`#scratch-${id} .scratch-copy`);
+                if (btn) { btn.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => btn.innerHTML = '<i class="fa-solid fa-copy"></i>', 1200); }
+            });
+        }
+
+        async function deleteScratch(id) {
+            try {
+                await api.del('/api/scratches/' + id);
+                state.scratches = state.scratches.filter(s => s.id !== id);
+                renderScratchPad();
+            } catch (e) {
+                showToast('Failed to delete scratch');
+            }
+        }
+
         // --- INIT ---
         // --- GLOBAL SEARCH ---
         const openGlobalSearch = () => {
             $('searchOverlay').classList.add('open');
             $('globalSearchInput').value = '';
-            $('globalSearchResults').innerHTML = `<div class="search-results-empty"><i class="fa-solid fa-magnifying-glass"></i>Type to search across playbooks, docs, ideas, tools, logs, events...</div>`;
+            $('globalSearchResults').innerHTML = `<div class="search-results-empty"><i class="fa-solid fa-magnifying-glass"></i>Type to search across everything...</div>`;
             setTimeout(() => $('globalSearchInput').focus(), 50);
         };
 
@@ -6237,6 +6606,9 @@
             task: { icon: 'fa-list-check', color: '#EF4444', label: 'Task' },
             workstation: { icon: 'fa-building', color: '#F97316', label: 'Workstation' },
             contact: { icon: 'fa-address-book', color: '#8B5CF6', label: 'Contact' },
+            scratch: { icon: 'fa-terminal', color: '#22D3EE', label: 'Scratch' },
+            radar: { icon: 'fa-satellite-dish', color: '#F472B6', label: 'Radar' },
+            recurring: { icon: 'fa-repeat', color: '#A78BFA', label: 'Recurring Task' },
         };
 
         const runGlobalSearch = (query) => {
@@ -6244,7 +6616,7 @@
             const container = $('globalSearchResults');
 
             if (!q) {
-                container.innerHTML = `<div class="search-results-empty"><i class="fa-solid fa-magnifying-glass"></i>Type to search across playbooks, docs, ideas, tools, logs, events...</div>`;
+                container.innerHTML = `<div class="search-results-empty"><i class="fa-solid fa-magnifying-glass"></i>Type to search across everything...</div>`;
                 return;
             }
 
@@ -6338,6 +6710,39 @@
                 }
             });
 
+            // Scratches
+            (state.scratches || []).forEach(s => {
+                if ((s.content || '').toLowerCase().includes(q)) {
+                    const d = new Date(s.created_at);
+                    const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+                    const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    results.push({ type: 'scratch', title: s.content.substring(0, 80) + (s.content.length > 80 ? '...' : ''), meta: `${date} · ${time}`, id: s.id,
+                        action: () => { closeGlobalSearch(); state.view = 'scratchpad'; localStorage.setItem('cc_current_view', 'scratchpad'); document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=scratchpad]')?.classList.add('active'); const agenda = document.querySelector('.agenda-container'); agenda.style.display = 'none'; $('mainContent').style.gridTemplateRows = '0px auto 1fr'; renderScratchPad(); }
+                    });
+                }
+            });
+
+            // Radar Updates
+            (state.radarUpdates || []).forEach(r => {
+                const content = strip(r.content);
+                if (content.toLowerCase().includes(q)) {
+                    const date = new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    results.push({ type: 'radar', title: content.substring(0, 80) + (content.length > 80 ? '...' : ''), meta: `${r.city || 'Unknown'} · ${date}`, id: r.id,
+                        action: () => { closeGlobalSearch(); state.view = 'radar'; localStorage.setItem('cc_current_view', 'radar'); document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=radar]')?.classList.add('active'); const agenda = document.querySelector('.agenda-container'); agenda.style.display = 'none'; $('mainContent').style.gridTemplateRows = '0px auto 1fr'; renderRadar(); }
+                    });
+                }
+            });
+
+            // Recurring Tasks
+            (state.recurringTasks || []).forEach(rt => {
+                if ((rt.text || '').toLowerCase().includes(q)) {
+                    const days = (rt.days || []).join(', ');
+                    results.push({ type: 'recurring', title: rt.text, meta: `${rt.priority || ''} · ${days || 'Daily'}`, id: rt.id,
+                        action: () => { closeGlobalSearch(); }
+                    });
+                }
+            });
+
             // Workstations
             state.companies.forEach(ws => {
                 const name = ws.name || '';
@@ -6419,7 +6824,7 @@
 
             renderSidebar();
             // Render the correct view
-            const hideAgenda = state.view === 'docs' || state.view === 'calendar' || state.view === 'ideas' || state.view === 'crm' || state.view === 'radar';
+            const hideAgenda = state.view === 'docs' || state.view === 'calendar' || state.view === 'ideas' || state.view === 'crm' || state.view === 'radar' || state.view === 'scratchpad';
             if (hideAgenda) {
                 document.querySelector('.agenda-container').style.display = 'none';
                 $('agendaResizeHandle').style.display = 'none';
@@ -6438,6 +6843,7 @@
             else if (state.view === 'ideas') renderIdeas();
             else if (state.view === 'crm') renderCRM();
             else if (state.view === 'radar') renderRadar();
+            else if (state.view === 'scratchpad') renderScratchPad();
             else renderDashboard();
             renderAgenda();
             renderChat();
@@ -6452,14 +6858,14 @@
             // Nav icon toggles
             document.querySelectorAll('.nav-icon[data-view]').forEach(icon => {
                 icon.onclick = () => {
-                    document.querySelector('.nav-icon.active').classList.remove('active');
+                    document.querySelector('.nav-icon.active')?.classList.remove('active');
                     icon.classList.add('active');
                     state.view = icon.dataset.view;
                     localStorage.setItem('cc_current_view', state.view);
                     // Hide agenda on docs view, expand dynamic-view to full height
                     const agenda = document.querySelector('.agenda-container');
                     const main = $('mainContent');
-                    const hideAgenda = state.view === 'docs' || state.view === 'calendar' || state.view === 'ideas' || state.view === 'crm' || state.view === 'radar';
+                    const hideAgenda = state.view === 'docs' || state.view === 'calendar' || state.view === 'ideas' || state.view === 'crm' || state.view === 'radar' || state.view === 'scratchpad';
                     if (hideAgenda) {
                         agenda.style.display = 'none';
                         $('agendaResizeHandle').style.display = 'none';
@@ -6478,6 +6884,7 @@
                     if (state.view === 'ideas') renderIdeas();
                     if (state.view === 'crm') renderCRM();
                     if (state.view === 'radar') renderRadar();
+                    if (state.view === 'scratchpad') renderScratchPad();
                 };
             });
 
@@ -6493,7 +6900,20 @@
                 };
             });
 
-            $('logoToggle').onclick = () => $('sidebar').classList.toggle('collapsed');
+            $('logoToggle').onclick = () => {
+                state.view = 'dashboard';
+                localStorage.setItem('cc_current_view', 'dashboard');
+                document.querySelector('.nav-icon.active')?.classList.remove('active');
+                const agenda = document.querySelector('.agenda-container');
+                agenda.style.display = '';
+                $('agendaResizeHandle').style.display = '';
+                $('mainContent').style.gridTemplateRows = 'var(--agenda-height, 300px) auto 1fr';
+                renderDashboard();
+            };
+
+            $('btnWorkstations').onclick = () => {
+                $('sidebar').classList.toggle('collapsed');
+            };
 
             // Chat panel resize
             const resizeHandle = $('chatResizeHandle');
@@ -6634,11 +7054,60 @@
                 showToast('Settings saved');
             };
 
-            $('btnResetData').onclick = async () => {
-                if (confirm('Erase all data from the database and reload defaults?')) {
-                    await api.del('/api/reset');
-                    location.reload();
+            $('btnExportBackup').onclick = async () => {
+                try {
+                    $('btnExportBackup').disabled = true;
+                    $('btnExportBackup').textContent = 'Exporting...';
+                    const backup = await api.get('/api/backup');
+                    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `sexyai-backup-${new Date().toISOString().split('T')[0]}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showToast('Backup downloaded');
+                } catch (err) {
+                    showToast('Export failed: ' + err.message);
+                } finally {
+                    $('btnExportBackup').disabled = false;
+                    $('btnExportBackup').innerHTML = '<i class="fa-solid fa-download" style="margin-right: 4px;"></i>Export Backup';
                 }
+            };
+
+            $('importBackupFile').onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                try {
+                    const text = await file.text();
+                    const backup = JSON.parse(text);
+                    const data = backup.data;
+                    if (!data) { showToast('Invalid backup file — missing data key'); return; }
+                    const counts = Object.entries(data)
+                        .filter(([, v]) => v?.length)
+                        .map(([k, v]) => `${v.length} ${k.replace(/_/g, ' ')}`)
+                        .join(', ');
+                    if (!confirm(`Import ${counts || 'empty backup'}?\n\nThis will merge into your existing data.`)) return;
+                    await api.post('/api/migrate', data);
+                    await loadFromServer();
+                    bootApp();
+                    closeModal('settingsModal');
+                    showToast('Backup restored successfully');
+                } catch (err) {
+                    showToast('Import failed: ' + err.message);
+                } finally {
+                    e.target.value = '';
+                }
+            };
+
+            $('btnResetData').onclick = async () => {
+                if (!confirm('This will permanently erase ALL data. Are you sure?')) return;
+                const typed = prompt('Type "DELETE" to confirm:');
+                if (typed !== 'DELETE') { showToast('Reset cancelled'); return; }
+                await api.del('/api/reset');
+                location.reload();
             };
 
             $('btnSend').onclick = () => {

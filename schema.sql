@@ -54,6 +54,8 @@ create table if not exists tools (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   url text not null,
+  cost numeric,
+  cost_period text, -- 'monthly', 'yearly', 'weekly', 'one-time'
   created_at timestamptz default now()
 );
 

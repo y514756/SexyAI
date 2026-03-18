@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
+const cron = require('node-cron');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -316,8 +317,8 @@ app.get('/api/tools', async (req, res) => {
 });
 
 app.post('/api/tools', async (req, res) => {
-  const { name, url, description, category, icon } = req.body;
-  const { data, error } = await supabase.from('tools').insert({ name, url, description, category, icon }).select().single();
+  const { name, url, description, category, icon, cost, cost_period } = req.body;
+  const { data, error } = await supabase.from('tools').insert({ name, url, description, category, icon, cost, cost_period }).select().single();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
@@ -340,19 +341,54 @@ app.delete('/api/tools/:id', async (req, res) => {
 });
 
 // ─────────────────────────────────────────
-// BULK MIGRATION
+// BACKUP & MIGRATION
 // ─────────────────────────────────────────
-app.post('/api/migrate', async (req, res) => {
-  const { companies, playbooks, tasks, logs, chat, tools } = req.body;
+app.get('/api/backup', async (req, res) => {
   try {
-    if (companies?.length) await supabase.from('companies').upsert(companies.map(c => ({ name: c.name, color: c.color })));
-    if (playbooks?.length) await supabase.from('playbooks').upsert(playbooks.map(pb => ({
-      id: pb.id, name: pb.name, company: pb.company, global_instructions: pb.globalInstructions, tools: pb.tools, steps: pb.steps
-    })));
-    if (tasks?.length) await supabase.from('tasks').upsert(tasks.map(t => ({ id: t.id, text: t.text, priority: t.priority, done: t.done })));
-    if (logs?.length) await supabase.from('logs').upsert(logs.map(l => ({ content: l.content, timestamp: l.timestamp })));
-    if (chat?.length) await supabase.from('chat_messages').upsert(chat.map((m, i) => ({ role: m.role, content: m.content, seq: i })));
-    if (tools?.length) await supabase.from('tools').upsert(tools.map(t => ({ name: t.name, url: t.url })));
+    const tables = [
+      'companies', 'playbooks', 'tasks', 'logs', 'chat_messages',
+      'chat_sessions', 'tools', 'calendar_events', 'documents',
+      'ideas', 'contacts', 'recurring_tasks', 'recurring_completions',
+      'radar_updates', 'radar_prompts', 'scratches'
+    ];
+    const results = await Promise.all(
+      tables.map(t => supabase.from(t).select('*').then(r => [t, r.data || []]))
+    );
+    const data = Object.fromEntries(results);
+    res.json({ version: 1, exported_at: new Date().toISOString(), data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/migrate', async (req, res) => {
+  const body = req.body;
+  const tableMap = {
+    companies: 'companies',
+    playbooks: 'playbooks',
+    tasks: 'tasks',
+    logs: 'logs',
+    chat: 'chat_messages',
+    chat_messages: 'chat_messages',
+    chat_sessions: 'chat_sessions',
+    tools: 'tools',
+    calendar_events: 'calendar_events',
+    documents: 'documents',
+    ideas: 'ideas',
+    contacts: 'contacts',
+    recurring_tasks: 'recurring_tasks',
+    recurring_completions: 'recurring_completions',
+    radar_updates: 'radar_updates',
+    radar_prompts: 'radar_prompts',
+    scratches: 'scratches'
+  };
+  try {
+    for (const [key, table] of Object.entries(tableMap)) {
+      const rows = body[key];
+      if (rows?.length) {
+        await supabase.from(table).upsert(rows);
+      }
+    }
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -745,6 +781,42 @@ app.post('/api/radar/scan', async (req, res) => {
 });
 
 // ─────────────────────────────────────────
+// SCRATCHES (Scratch Pad)
+// ─────────────────────────────────────────
+app.get('/api/scratches', async (req, res) => {
+  const { data, error } = await supabase.from('scratches').select('*').order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.post('/api/scratches', async (req, res) => {
+  const { content } = req.body;
+  if (!content) return res.status(400).json({ error: 'Content is required' });
+  const { data, error } = await supabase.from('scratches').insert({ content }).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.patch('/api/scratches/:id', async (req, res) => {
+  const { content } = req.body;
+  if (!content) return res.status(400).json({ error: 'Content is required' });
+  const { data, error } = await supabase
+    .from('scratches')
+    .update({ content })
+    .eq('id', req.params.id)
+    .select()
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.delete('/api/scratches/:id', async (req, res) => {
+  const { error } = await supabase.from('scratches').delete().eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// ─────────────────────────────────────────
 // Reset everything
 // ─────────────────────────────────────────
 app.delete('/api/reset', async (req, res) => {
@@ -763,6 +835,7 @@ app.delete('/api/reset', async (req, res) => {
     await supabase.from('recurring_completions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     await supabase.from('recurring_tasks').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     await supabase.from('radar_updates').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('scratches').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -776,7 +849,60 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// ─────────────────────────────────────────
+// SCHEDULED BACKUP (daily at 3 AM → Supabase Storage)
+// ─────────────────────────────────────────
+const BACKUP_BUCKET = 'backups';
+const BACKUP_KEEP_DAYS = 30;
+
+async function runScheduledBackup() {
+  console.log('[Backup] Starting scheduled backup...');
+  try {
+    const tables = [
+      'companies', 'playbooks', 'tasks', 'chat_messages',
+      'tools', 'calendar_events', 'documents', 'ideas',
+      'contacts', 'recurring_tasks', 'recurring_completions',
+      'radar_updates', 'radar_prompts', 'scratches'
+    ];
+    const results = await Promise.all(
+      tables.map(t => supabase.from(t).select('*').then(r => [t, r.data || []]))
+    );
+    const data = Object.fromEntries(results);
+    const backup = { version: 1, exported_at: new Date().toISOString(), data };
+    const fileName = `backup-${new Date().toISOString().split('T')[0]}.json`;
+    const buffer = Buffer.from(JSON.stringify(backup));
+
+    const { error: uploadErr } = await supabase.storage
+      .from(BACKUP_BUCKET)
+      .upload(fileName, buffer, { contentType: 'application/json', upsert: true });
+
+    if (uploadErr) throw uploadErr;
+    console.log(`[Backup] Uploaded ${fileName} (${(buffer.length / 1024).toFixed(1)} KB)`);
+
+    // Rotate: delete backups older than BACKUP_KEEP_DAYS
+    const { data: files } = await supabase.storage.from(BACKUP_BUCKET).list();
+    if (files?.length) {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - BACKUP_KEEP_DAYS);
+      const old = files.filter(f => {
+        const match = f.name.match(/backup-(\d{4}-\d{2}-\d{2})\.json/);
+        return match && new Date(match[1]) < cutoff;
+      }).map(f => f.name);
+      if (old.length) {
+        await supabase.storage.from(BACKUP_BUCKET).remove(old);
+        console.log(`[Backup] Rotated ${old.length} old backup(s)`);
+      }
+    }
+  } catch (err) {
+    console.error('[Backup] Failed:', err.message);
+  }
+}
+
+// Run daily at 3:00 AM
+cron.schedule('0 3 * * *', runScheduledBackup);
+
 app.listen(PORT, () => {
   console.log(`AI Command Center running on http://localhost:${PORT}`);
   console.log(`   Supabase: ${process.env.SUPABASE_URL || 'SUPABASE_URL not set'}`);
+  console.log(`   Auto-backup: daily at 3:00 AM → Supabase Storage (${BACKUP_BUCKET})`);
 });
