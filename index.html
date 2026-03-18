@@ -41,7 +41,7 @@
             color: var(--text-primary);
             height: 100vh;
             overflow: hidden;
-            display: flex;
+            margin: 0;
         }
 
         /* Scrollbar */
@@ -171,13 +171,30 @@
             flex: 1;
             display: grid;
             grid-template-columns: 1fr var(--chat-width, 400px);
-            grid-template-rows: 300px 1fr;
+            grid-template-rows: var(--agenda-height, 300px) auto 1fr;
             gap: 0;
             overflow: hidden;
             position: relative;
         }
 
         /* Resize Handle */
+        .agenda-resize-handle {
+            position: relative;
+            grid-column: 1;
+            grid-row: 2;
+            height: 6px;
+            margin-top: -6px;
+            cursor: row-resize;
+            z-index: 50;
+            background: transparent;
+            transition: background 0.15s;
+        }
+        .agenda-resize-handle:hover,
+        .agenda-resize-handle.dragging {
+            background: var(--accent);
+            opacity: 0.6;
+        }
+
         .chat-resize-handle {
             position: absolute;
             top: 0; bottom: 0;
@@ -197,7 +214,7 @@
         /* Mission Chat */
         .mission-chat {
             grid-column: 2;
-            grid-row: 1 / span 2;
+            grid-row: 1 / span 3;
             background: var(--bg);
             border-left: var(--border);
             display: flex;
@@ -583,7 +600,7 @@
         /* Dynamic View Area */
         .dynamic-view {
             grid-column: 1;
-            grid-row: 2;
+            grid-row: 3;
             background: var(--bg);
             border-right: var(--border);
             padding: 24px;
@@ -799,8 +816,20 @@
 
         .dash-row {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
+            grid-template-columns: var(--dash-left, 1fr) 6px var(--dash-right, 1fr);
+            gap: 0;
+            position: relative;
+        }
+        .dash-resize-handle {
+            cursor: col-resize;
+            background: transparent;
+            transition: background 0.15s;
+            border-radius: 3px;
+        }
+        .dash-resize-handle:hover,
+        .dash-resize-handle.dragging {
+            background: var(--accent);
+            opacity: 0.6;
         }
 
         .activity-item {
@@ -1518,6 +1547,7 @@
     </style>
 </head>
 <body>
+<div id="appWrapper" style="width: 100%; height: 100vh; overflow: hidden; display: flex;">
 
     <!-- Auth Screen Overlay -->
     <div id="authScreen" style="
@@ -1574,7 +1604,7 @@
             <div class="nav-icon" data-view="tools" title="Tool Stack"><i class="fa-solid fa-toolbox"></i></div>
             <div class="nav-icon" data-view="docs" title="Documents"><i class="fa-solid fa-file-lines"></i></div>
             <div class="nav-icon" data-view="calendar" title="Calendar"><i class="fa-solid fa-calendar-days"></i></div>
-            <div class="nav-icon" data-view="ideas" title="Idea Box"><i class="fa-solid fa-lightbulb"></i></div>
+            <div class="nav-icon" data-view="ideas" title="Product Board"><i class="fa-solid fa-lightbulb"></i></div>
             <div class="nav-icon" data-view="crm" title="CRM"><i class="fa-solid fa-address-book"></i></div>
             <div class="nav-icon" data-view="radar" title="Nightlife Radar"><i class="fa-solid fa-satellite-dish"></i></div>
         </div>
@@ -1666,6 +1696,7 @@
             <div class="task-list" id="taskList"></div>
         </section>
 
+        <div class="agenda-resize-handle" id="agendaResizeHandle"></div>
         <section class="dynamic-view" id="dynamicView">
             <!-- View toggled by icons -->
         </section>
@@ -1694,6 +1725,15 @@
                 <div class="form-group">
                     <label><span class="tab-dot" style="background: #EF4444; display: inline-block; width: 6px; height: 6px; border-radius: 50%; vertical-align: middle; margin-right: 6px;"></span>Grok API Key</label>
                     <input type="password" id="grokKeyInput" placeholder="xai-...">
+                </div>
+                <div style="border-top: 1px solid var(--border); margin-top: 8px; padding-top: 14px;">
+                    <label style="font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; display: block;"><i class="fa-solid fa-text-height" style="margin-right: 6px;"></i>Font Size</label>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="font-size: 11px; color: var(--text-dim);">A</span>
+                        <input type="range" id="fontSizeSlider" min="12" max="18" step="1" value="14" style="flex: 1; accent-color: var(--accent);" oninput="previewFontSize(this.value)">
+                        <span style="font-size: 18px; color: var(--text-dim);">A</span>
+                        <span id="fontSizeLabel" style="font-size: 12px; color: var(--text-secondary); min-width: 32px; text-align: center;">14px</span>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -1995,6 +2035,17 @@
                         <input type="text" id="ideaCategoryInput" placeholder="e.g. Marketing">
                     </div>
                 </div>
+                <div style="display: flex; gap: 12px;">
+                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                        <label>Project</label>
+                        <input type="text" id="ideaProjectInput" placeholder="e.g. LOKKR MVP" list="ideaProjectList">
+                        <datalist id="ideaProjectList"></datalist>
+                    </div>
+                    <div class="form-group" style="flex-shrink: 0; width: 100px; margin-bottom: 0;">
+                        <label>Version</label>
+                        <input type="text" id="ideaVersionInput" placeholder="e.g. v1.0">
+                    </div>
+                </div>
                 <div class="form-group" style="margin-bottom: 0;">
                     <label>Workstation</label>
                     <select id="ideaCompanyInput"></select>
@@ -2006,10 +2057,11 @@
             </div>
             <div class="modal-footer">
                 <button class="btn-chat-action" style="background: #EF4444; color: white;" id="ideaDeleteBtn" onclick="deleteCurrentIdea()">Delete</button>
+                <button class="btn-chat-action" id="ideaNewVersionBtn" onclick="newIdeaVersion()" style="display:none;"><i class="fa-solid fa-code-branch"></i> New Version</button>
                 <div style="flex: 1;"></div>
                 <button class="btn-chat-action" onclick="convertIdeaToTask()" id="ideaToTaskBtn"><i class="fa-solid fa-list-check"></i> To Task</button>
                 <button class="btn-chat-action" onclick="convertIdeaToDoc()" id="ideaToDocBtn"><i class="fa-solid fa-file-lines"></i> To Doc</button>
-                <button class="btn-send" onclick="saveIdea()">Save Idea</button>
+                <button class="btn-send" onclick="saveIdea()">Save</button>
             </div>
         </div>
     </div>
@@ -2406,6 +2458,8 @@
     </div>
 
     <div class="toast" id="toast">Changes saved.</div>
+
+</div><!-- /appWrapper -->
 
     <script>
         // --- DATA & STATE ---
@@ -2979,6 +3033,12 @@
             let html = `
                 <div class="dash-row">
                     <div>
+                        ${buildPlannerHTML()}
+                    </div>
+
+                    <div class="dash-resize-handle" id="dashResizeHandle"></div>
+
+                    <div>
                         <div class="dash-section">
                             <div class="dash-section-title"><i class="fa-solid fa-calendar-day" style="color: #EC4899;"></i> Today's Schedule</div>
                             ${(() => {
@@ -3010,8 +3070,7 @@
                                 overdue.forEach(c => {
                                     const days = Math.floor((today - new Date(c.next_follow_up)) / (1000*60*60*24));
                                     const daysLabel = days === 1 ? '1 day overdue' : days < 7 ? days + ' days overdue' : Math.floor(days/7) + ' week' + (Math.floor(days/7)>1?'s':'') + ' overdue';
-                                    const t = CRM_TYPES[c.type] || {};
-                                    fhtml += `<div class="activity-item" style="cursor:pointer; border-left: 3px solid #EF4444; padding-left: 12px; border-radius: 4px;" onclick="state.view='crm'; document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=crm]')?.classList.add('active'); document.querySelector('.agenda-container').style.display='none'; $('mainContent').style.gridTemplateRows='0px 1fr'; renderCRM(); openCrmEditor('${c.id}');">
+                                    fhtml += `<div class="activity-item" style="cursor:pointer; border-left: 3px solid #EF4444; padding-left: 12px; border-radius: 4px;" onclick="state.view='crm'; document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=crm]')?.classList.add('active'); document.querySelector('.agenda-container').style.display='none'; $('agendaResizeHandle').style.display='none'; $('mainContent').style.gridTemplateRows='0px auto 1fr'; renderCRM(); openCrmEditor('${c.id}');">
                                         <div style="flex: 1; min-width: 0;">
                                             <div style="font-size: 14px; font-weight: 500;"><span style="color: #EF4444; margin-right: 4px;">&#9888;</span> Follow up: ${c.name}${c.city ? ' (' + c.city + ')' : ''}</div>
                                             <div style="font-size: 12px; color: #EF4444;">${daysLabel}</div>
@@ -3019,8 +3078,7 @@
                                     </div>`;
                                 });
                                 upcoming.forEach(c => {
-                                    const t = CRM_TYPES[c.type] || {};
-                                    fhtml += `<div class="activity-item" style="cursor:pointer; border-left: 3px solid #06B6D4; padding-left: 12px; border-radius: 4px;" onclick="state.view='crm'; document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=crm]')?.classList.add('active'); document.querySelector('.agenda-container').style.display='none'; $('mainContent').style.gridTemplateRows='0px 1fr'; renderCRM(); openCrmEditor('${c.id}');">
+                                    fhtml += `<div class="activity-item" style="cursor:pointer; border-left: 3px solid #06B6D4; padding-left: 12px; border-radius: 4px;" onclick="state.view='crm'; document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=crm]')?.classList.add('active'); document.querySelector('.agenda-container').style.display='none'; $('agendaResizeHandle').style.display='none'; $('mainContent').style.gridTemplateRows='0px auto 1fr'; renderCRM(); openCrmEditor('${c.id}');">
                                         <div style="flex: 1; min-width: 0;">
                                             <div style="font-size: 14px; font-weight: 500;"><i class="fa-solid fa-clock" style="color: #06B6D4; margin-right: 4px;"></i> ${c.name}${c.city ? ' (' + c.city + ')' : ''}</div>
                                             <div style="font-size: 12px; color: var(--text-dim);">Follow up: ${new Date(c.next_follow_up).toLocaleDateString()}</div>
@@ -3031,8 +3089,6 @@
                             })()}
                         </div>
 
-                        ${buildPlannerHTML()}
-
                         <div class="dash-section">
                             <div class="dash-section-title"><i class="fa-solid fa-lightbulb" style="color: #F59E0B;"></i> Recent Sparks</div>
                             ${(() => {
@@ -3040,45 +3096,10 @@
                                 if (sparks.length === 0) return '<div style="color: var(--text-dim); font-size: 14px; padding: 8px 0;">No sparks yet. Capture an idea.</div>';
                                 return sparks.map(i => {
                                     const color = i.color || '#F59E0B';
-                                    return `<div class="activity-item" style="cursor:pointer; border-left: 3px solid ${color}; padding-left: 12px; border-radius: 4px;" onclick="state.view='ideas'; document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=ideas]')?.classList.add('active'); document.querySelector('.agenda-container').style.display='none'; $('mainContent').style.gridTemplateRows='0px 1fr'; renderIdeas(); openIdeaEditor('${i.id}');">
+                                    return `<div class="activity-item" style="cursor:pointer; border-left: 3px solid ${color}; padding-left: 12px; border-radius: 4px;" onclick="state.view='ideas'; document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=ideas]')?.classList.add('active'); document.querySelector('.agenda-container').style.display='none'; $('agendaResizeHandle').style.display='none'; $('mainContent').style.gridTemplateRows='0px auto 1fr'; renderIdeas(); openIdeaEditor('${i.id}');">
                                         <div style="flex: 1; min-width: 0;">
                                             <div style="font-size: 14px; font-weight: 500;">${i.title}</div>
                                             ${i.category ? `<div style="font-size: 12px; color: var(--text-dim);">${i.category}</div>` : ''}
-                                        </div>
-                                    </div>`;
-                                }).join('');
-                            })()}
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="dash-section">
-                            <div class="dash-section-title"><i class="fa-solid fa-bolt" style="color: var(--accent);"></i> Quick Actions</div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                                <button class="quick-action" onclick="openDesigner();"><i class="fa-solid fa-book"></i> Playbook</button>
-                                <button class="quick-action" onclick="state.view='docs'; document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=docs]')?.classList.add('active'); openDocEditor();"><i class="fa-solid fa-file-lines"></i> Document</button>
-                                <button class="quick-action" onclick="state.view='ideas'; document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=ideas]')?.classList.add('active'); renderIdeas(); openIdeaEditor();"><i class="fa-solid fa-lightbulb"></i> Idea</button>
-                                <button class="quick-action" onclick="state.view='calendar'; document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=calendar]')?.classList.add('active'); renderCalendar(); openEventEditor();"><i class="fa-solid fa-calendar-plus"></i> Event</button>
-                                <button class="quick-action" onclick="openToolEditor();"><i class="fa-solid fa-toolbox"></i> Tool</button>
-                                <button class="quick-action" onclick="state.view='crm'; document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=crm]')?.classList.add('active'); document.querySelector('.agenda-container').style.display='none'; $('mainContent').style.gridTemplateRows='0px 1fr'; renderCRM(); openCrmEditor();"><i class="fa-solid fa-address-book"></i> Contact</button>
-                                <button class="quick-action" onclick="openWorkstationEditor();"><i class="fa-solid fa-building"></i> Workstation</button>
-                            </div>
-                        </div>
-
-                        <div class="dash-section">
-                            <div class="dash-section-title"><i class="fa-solid fa-clock-rotate-left" style="color: #10B981;"></i> Recent Activity</div>
-                            ${(() => {
-                                const recent = [...state.logs].reverse().slice(0, 5);
-                                if (recent.length === 0) return '<div style="color: var(--text-dim); font-size: 14px; padding: 8px 0;">No activity yet.</div>';
-                                return recent.map(log => {
-                                    const agentKey = log.agent || 'unknown';
-                                    const agentColor = AGENT_COLORS[agentKey] || 'var(--text-dim)';
-                                    const agentName = AGENT_NAMES[agentKey] || agentKey;
-                                    const plain = (log.content || '').replace(/<[^>]*>/g, '');
-                                    return `<div class="activity-item" style="cursor:pointer;" onclick="state.view='logs'; document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=logs]')?.classList.add('active'); renderLogs(); openLogViewer('${log.id}');">
-                                        <span style="font-size:11px;font-weight:700;padding:1px 6px;border-radius:8px;background:${agentColor}22;color:${agentColor};flex-shrink:0;">${agentName}</span>
-                                        <div style="flex: 1; min-width: 0;">
-                                            <div style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${plain.substring(0, 70)}</div>
                                         </div>
                                     </div>`;
                                 }).join('');
@@ -4255,8 +4276,10 @@
                     <div class="idea-card-title">${idea.title}</div>
                     ${idea.body ? `<div class="idea-card-body">${idea.body.replace(/<[^>]*>/g, '').substring(0, 120)}</div>` : ''}
                     <div class="idea-card-meta">
+                        ${idea.project ? `<span class="doc-tag" style="font-size: 11px; background: var(--accent)22; color: var(--accent);"><i class="fa-solid fa-folder" style="margin-right: 3px;"></i>${idea.project}</span>` : ''}
+                        ${idea.version ? `<span class="doc-tag" style="font-size: 11px;">${idea.version}</span>` : ''}
                         ${idea.category ? `<span class="doc-tag">${idea.category}</span>` : ''}
-                        ${idea.company ? `<span class="doc-tag" style="font-size: 12px;">${idea.company}</span>` : ''}
+                        ${idea.company ? `<span class="doc-tag" style="font-size: 11px;">${idea.company}</span>` : ''}
                     </div>
                 </div>
             `;
@@ -4266,9 +4289,22 @@
             if (state.view !== 'ideas') return;
             const view = $('dynamicView');
 
+            const archivedProjects = JSON.parse(localStorage.getItem('cc_archived_projects') || '[]');
+
             let all = state.selectedCompany === 'All workstations'
                 ? [...state.ideas]
                 : state.ideas.filter(i => i.company === state.selectedCompany);
+
+            // Separate archived project items
+            const archivedItems = all.filter(i => i.project && archivedProjects.includes(i.project));
+            all = all.filter(i => !i.project || !archivedProjects.includes(i.project));
+
+            // Project filter (only active projects)
+            const projects = ['All', ...new Set(all.map(i => i.project).filter(Boolean))];
+            if (!state.ideaProjectFilter) state.ideaProjectFilter = 'All';
+            if (state.ideaProjectFilter !== 'All') {
+                all = all.filter(i => i.project === state.ideaProjectFilter);
+            }
 
             // Search
             if (state.ideaSearch) {
@@ -4276,7 +4312,8 @@
                 all = all.filter(i =>
                     i.title.toLowerCase().includes(q) ||
                     (i.body || '').toLowerCase().includes(q) ||
-                    (i.category || '').toLowerCase().includes(q)
+                    (i.category || '').toLowerCase().includes(q) ||
+                    (i.project || '').toLowerCase().includes(q)
                 );
             }
 
@@ -4296,18 +4333,35 @@
             ];
 
             let html = `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h1 style="font-size: 24px; font-weight: 700;">Idea Box</h1>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h1 style="font-size: 24px; font-weight: 700;">Product Board</h1>
                     <div style="display: flex; align-items: center; gap: 12px;">
-                        <input type="text" placeholder="Search ideas..." value="${state.ideaSearch}"
+                        <input type="text" placeholder="Search..." value="${state.ideaSearch}"
                             oninput="state.ideaSearch=this.value; renderIdeas();"
-                            style="background: var(--surface); border: var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text-primary); font-size: 13px; width: 220px;">
-                        <button class="btn-send" onclick="openIdeaEditor()">+ New Idea</button>
+                            style="background: var(--surface); border: var(--border); border-radius: 8px; padding: 8px 12px; color: var(--text-primary); font-size: 13px; width: 180px;">
+                        <button class="btn-send" onclick="openIdeaEditor()">+ New Item</button>
                     </div>
                 </div>
+                ${projects.length > 1 || archivedProjects.length > 0 ? `
+                    <div style="display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; align-items: center;">
+                        ${projects.map(p => `
+                            <button class="btn-chat-action" onclick="state.ideaProjectFilter='${p}'; renderIdeas();"
+                                style="${state.ideaProjectFilter === p ? 'background: var(--accent); color: white;' : ''} font-size: 12px; padding: 4px 12px;">
+                                ${p === 'All' ? 'All Projects' : p}
+                            </button>
+                        `).join('')}
+                        ${state.ideaProjectFilter !== 'All' ? `
+                            <div style="flex: 1;"></div>
+                            <button class="btn-chat-action" onclick="archiveProject('${state.ideaProjectFilter}')"
+                                style="font-size: 12px; padding: 4px 12px; opacity: 0.6;" title="Archive this project">
+                                <i class="fa-solid fa-box-archive"></i> Archive
+                            </button>
+                        ` : ''}
+                    </div>
+                ` : ''}
                 <div class="idea-quick-add">
                     <i class="fa-solid fa-lightbulb" style="color: var(--text-dim); font-size: 18px;"></i>
-                    <input type="text" id="ideaQuickInput" placeholder="Quick capture — type an idea and hit Enter..."
+                    <input type="text" id="ideaQuickInput" placeholder="Quick capture — type and hit Enter..."
                         onkeydown="if(event.key==='Enter'){event.preventDefault();quickAddIdea();}">
                     <button class="btn-send" onclick="quickAddIdea()" style="padding: 8px 16px;">Add</button>
                 </div>
@@ -4338,7 +4392,7 @@
                     <div class="idea-archived-toggle" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'grid' : 'none'; this.querySelector('i').classList.toggle('fa-chevron-right'); this.querySelector('i').classList.toggle('fa-chevron-down');">
                         <i class="fa-solid fa-chevron-right" style="font-size: 11px;"></i>
                         <i class="fa-solid fa-archive" style="color: #8B5CF6;"></i>
-                        Archived <span style="opacity: 0.5;">${done.length}</span>
+                        Done <span style="opacity: 0.5;">${done.length}</span>
                     </div>
                     <div class="idea-archived-grid" style="display: none;">
                         ${done.map(renderIdeaCard).join('')}
@@ -4346,7 +4400,57 @@
                 `;
             }
 
+            // Archived projects section
+            if (archivedProjects.length > 0) {
+                const archivedByProject = {};
+                archivedItems.forEach(i => {
+                    if (!archivedByProject[i.project]) archivedByProject[i.project] = [];
+                    archivedByProject[i.project].push(i);
+                });
+                html += `
+                    <div class="idea-archived-toggle" style="margin-top: 16px;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'; this.querySelector('.fa-chevron-right, .fa-chevron-down').classList.toggle('fa-chevron-right'); this.querySelector('.fa-chevron-down, .fa-chevron-right').classList.toggle('fa-chevron-down');">
+                        <i class="fa-solid fa-chevron-right" style="font-size: 11px;"></i>
+                        <i class="fa-solid fa-box-archive" style="color: #6B7280;"></i>
+                        Archived Projects <span style="opacity: 0.5;">${archivedProjects.length}</span>
+                    </div>
+                    <div style="display: none;">
+                        ${archivedProjects.map(proj => {
+                            const items = archivedByProject[proj] || [];
+                            return `
+                                <div style="margin: 12px 0; padding: 12px; background: var(--surface); border-radius: 8px; border: 1px solid var(--border);">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                        <span style="font-weight: 600; font-size: 14px;"><i class="fa-solid fa-folder" style="margin-right: 6px; color: #6B7280;"></i>${proj}</span>
+                                        <div style="display: flex; gap: 6px;">
+                                            <button class="btn-chat-action" onclick="unarchiveProject('${proj}')" style="font-size: 11px; padding: 3px 10px;">
+                                                <i class="fa-solid fa-rotate-left"></i> Restore
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div style="font-size: 12px; color: var(--text-dim);">${items.length} item${items.length !== 1 ? 's' : ''}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            }
+
             view.innerHTML = html;
+        };
+
+        const archiveProject = (project) => {
+            const archived = JSON.parse(localStorage.getItem('cc_archived_projects') || '[]');
+            if (!archived.includes(project)) archived.push(project);
+            localStorage.setItem('cc_archived_projects', JSON.stringify(archived));
+            state.ideaProjectFilter = 'All';
+            renderIdeas();
+            showToast(`"${project}" archived`);
+        };
+
+        const unarchiveProject = (project) => {
+            const archived = JSON.parse(localStorage.getItem('cc_archived_projects') || '[]').filter(p => p !== project);
+            localStorage.setItem('cc_archived_projects', JSON.stringify(archived));
+            renderIdeas();
+            showToast(`"${project}" restored`);
         };
 
         const quickAddIdea = async () => {
@@ -4372,11 +4476,13 @@
         const openIdeaEditor = (id) => {
             const idea = id ? state.ideas.find(i => i.id === id) : null;
             state.editingIdea = idea;
-            $('ideaEditorTitle').textContent = idea ? 'Edit Idea' : 'New Idea';
+            $('ideaEditorTitle').textContent = idea ? 'Edit Item' : 'New Item';
             $('ideaTitleInput').value = idea ? idea.title : '';
             $('ideaBodyInput').innerHTML = idea ? (idea.body || '') : '';
             $('ideaStatusInput').value = idea ? idea.status : 'spark';
             $('ideaCategoryInput').value = idea ? (idea.category || '') : '';
+            $('ideaProjectInput').value = idea ? (idea.project || '') : '';
+            $('ideaVersionInput').value = idea ? (idea.version || '') : '';
             state.editingIdeaColor = idea ? (idea.color || '#6366F1') : IDEA_COLORS[Math.floor(Math.random() * IDEA_COLORS.length)];
 
             // Company select
@@ -4384,15 +4490,20 @@
                 state.companies.map(c => `<option value="${c.name}" ${idea && idea.company === c.name ? 'selected' : ''}>${c.name}</option>`).join('');
             if (idea && idea.company) $('ideaCompanyInput').value = idea.company;
 
+            // Project datalist (unique project names)
+            const projects = [...new Set(state.ideas.map(i => i.project).filter(Boolean))];
+            $('ideaProjectList').innerHTML = projects.map(p => `<option value="${p}">`).join('');
+
             // Color swatches
             $('ideaColorSwatches').innerHTML = IDEA_COLORS.map(c =>
                 `<div class="idea-color-swatch ${state.editingIdeaColor === c ? 'active' : ''}" style="background:${c};" onclick="pickIdeaColor('${c}')"></div>`
             ).join('');
 
-            // Show/hide delete + convert buttons
+            // Show/hide delete + convert + version buttons
             $('ideaDeleteBtn').style.display = idea ? '' : 'none';
             $('ideaToTaskBtn').style.display = idea ? '' : 'none';
             $('ideaToDocBtn').style.display = idea ? '' : 'none';
+            $('ideaNewVersionBtn').style.display = idea ? '' : 'none';
 
             openModal('ideaEditorModal');
         };
@@ -4405,13 +4516,15 @@
         };
 
         const saveIdea = async () => {
-            const title = $('ideaTitleInput').value.trim() || 'Untitled Idea';
+            const title = $('ideaTitleInput').value.trim() || 'Untitled';
             const payload = {
                 title,
                 body: $('ideaBodyInput').innerHTML,
                 status: $('ideaStatusInput').value,
                 category: $('ideaCategoryInput').value.trim(),
                 company: $('ideaCompanyInput').value || '',
+                project: $('ideaProjectInput').value.trim() || '',
+                version: $('ideaVersionInput').value.trim() || '',
                 color: state.editingIdeaColor,
                 pinned: state.editingIdea ? state.editingIdea.pinned : false
             };
@@ -4435,16 +4548,56 @@
         };
 
         const deleteCurrentIdea = async () => {
-            if (!state.editingIdea || !confirm('Delete this idea?')) return;
+            if (!state.editingIdea) return;
+            if (!state._ideaDeleteArmed || state._ideaDeleteArmedId !== state.editingIdea.id) {
+                state._ideaDeleteArmed = true;
+                state._ideaDeleteArmedId = state.editingIdea.id;
+                showToast('Click delete again to confirm');
+                setTimeout(() => { state._ideaDeleteArmed = false; state._ideaDeleteArmedId = null; }, 3000);
+                return;
+            }
+            state._ideaDeleteArmed = false;
+            state._ideaDeleteArmedId = null;
             try {
                 await api.del(`/api/ideas/${state.editingIdea.id}`);
                 state.ideas = state.ideas.filter(i => i.id !== state.editingIdea.id);
                 closeModal('ideaEditorModal');
                 renderIdeas();
                 renderSidebar();
-                showToast('Idea deleted');
+                showToast('Item deleted');
             } catch (err) {
                 showToast('Failed to delete');
+            }
+        };
+
+        const newIdeaVersion = async () => {
+            if (!state.editingIdea) return;
+            const src = state.editingIdea;
+            // Increment version: v1.0 -> v2.0, or append v2 if no version
+            const curVer = src.version || 'v1.0';
+            const match = curVer.match(/(\d+)/);
+            const nextNum = match ? parseInt(match[1]) + 1 : 2;
+            const nextVer = curVer.replace(/\d+/, nextNum) || `v${nextNum}.0`;
+            try {
+                const created = await api.post('/api/ideas', {
+                    title: src.title,
+                    body: src.body || '',
+                    color: src.color,
+                    category: src.category || '',
+                    status: 'spark',
+                    company: src.company || '',
+                    project: src.project || '',
+                    version: nextVer,
+                    pinned: false
+                });
+                state.ideas.unshift(created);
+                closeModal('ideaEditorModal');
+                renderIdeas();
+                renderSidebar();
+                openIdeaEditor(created.id);
+                showToast(`New version ${nextVer} created`);
+            } catch (err) {
+                showToast('Failed to create version: ' + err.message);
             }
         };
 
@@ -6057,7 +6210,7 @@
                 const tags = (doc.tags || []).join(' ');
                 if ((title + ' ' + content + ' ' + tags + ' ' + (doc.folder || '')).toLowerCase().includes(q)) {
                     results.push({ type: 'doc', title: title, meta: `${doc.folder || 'General'} · ${doc.company || ''}`, id: doc.id,
-                        action: () => { closeGlobalSearch(); state.view = 'docs'; localStorage.setItem('cc_current_view', 'docs'); document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=docs]')?.classList.add('active'); const agenda = document.querySelector('.agenda-container'); agenda.style.display = 'none'; $('mainContent').style.gridTemplateRows = '0px 1fr'; renderDocs(); openDocViewer(doc.id); }
+                        action: () => { closeGlobalSearch(); state.view = 'docs'; localStorage.setItem('cc_current_view', 'docs'); document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=docs]')?.classList.add('active'); const agenda = document.querySelector('.agenda-container'); agenda.style.display = 'none'; $('mainContent').style.gridTemplateRows = '0px auto 1fr'; renderDocs(); openDocViewer(doc.id); }
                     });
                 }
             });
@@ -6068,7 +6221,7 @@
                 const body = strip(idea.body);
                 if ((title + ' ' + body + ' ' + (idea.category || '')).toLowerCase().includes(q)) {
                     results.push({ type: 'idea', title: title, meta: `${IDEA_STATUS_LABELS[idea.status] || idea.status} · ${idea.company || ''}`, id: idea.id,
-                        action: () => { closeGlobalSearch(); state.view = 'ideas'; localStorage.setItem('cc_current_view', 'ideas'); document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=ideas]')?.classList.add('active'); const agenda = document.querySelector('.agenda-container'); agenda.style.display = 'none'; $('mainContent').style.gridTemplateRows = '0px 1fr'; renderIdeas(); openIdeaEditor(idea.id); }
+                        action: () => { closeGlobalSearch(); state.view = 'ideas'; localStorage.setItem('cc_current_view', 'ideas'); document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=ideas]')?.classList.add('active'); const agenda = document.querySelector('.agenda-container'); agenda.style.display = 'none'; $('mainContent').style.gridTemplateRows = '0px auto 1fr'; renderIdeas(); openIdeaEditor(idea.id); }
                     });
                 }
             });
@@ -6090,7 +6243,7 @@
                 if (content.toLowerCase().includes(q)) {
                     const agentName = AGENT_NAMES[log.agent] || log.agent || 'Unknown';
                     results.push({ type: 'log', title: content.substring(0, 80) + (content.length > 80 ? '...' : ''), meta: `${agentName} · ${new Date(log.timestamp).toLocaleDateString()}`, id: log.id,
-                        action: () => { closeGlobalSearch(); state.view = 'logs'; localStorage.setItem('cc_current_view', 'logs'); document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=logs]')?.classList.add('active'); const agenda = document.querySelector('.agenda-container'); agenda.style.display = ''; $('mainContent').style.gridTemplateRows = '300px 1fr'; renderLogs(); openLogViewer(log.id); }
+                        action: () => { closeGlobalSearch(); state.view = 'logs'; localStorage.setItem('cc_current_view', 'logs'); document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=logs]')?.classList.add('active'); const agenda = document.querySelector('.agenda-container'); agenda.style.display = ''; $('mainContent').style.gridTemplateRows = 'var(--agenda-height, 300px) auto 1fr'; renderLogs(); openLogViewer(log.id); }
                     });
                 }
             });
@@ -6100,7 +6253,7 @@
                 const title = ev.title || '';
                 if ((title + ' ' + (ev.description || '') + ' ' + (ev.company || '')).toLowerCase().includes(q)) {
                     results.push({ type: 'event', title: title, meta: `${ev.date || ''} · ${ev.company || ''}`, id: ev.id,
-                        action: () => { closeGlobalSearch(); state.view = 'calendar'; localStorage.setItem('cc_current_view', 'calendar'); document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=calendar]')?.classList.add('active'); const agenda = document.querySelector('.agenda-container'); agenda.style.display = 'none'; $('mainContent').style.gridTemplateRows = '0px 1fr'; loadCalendarEvents(); }
+                        action: () => { closeGlobalSearch(); state.view = 'calendar'; localStorage.setItem('cc_current_view', 'calendar'); document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=calendar]')?.classList.add('active'); const agenda = document.querySelector('.agenda-container'); agenda.style.display = 'none'; $('mainContent').style.gridTemplateRows = '0px auto 1fr'; loadCalendarEvents(); }
                     });
                 }
             });
@@ -6120,7 +6273,7 @@
                 if (searchStr.toLowerCase().includes(q)) {
                     const t = CRM_TYPES[contact.type] || {};
                     results.push({ type: 'contact', title: contact.name, meta: `${t.label || contact.type} · ${contact.city || 'No city'}`, id: contact.id,
-                        action: () => { closeGlobalSearch(); state.view = 'crm'; localStorage.setItem('cc_current_view', 'crm'); document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=crm]')?.classList.add('active'); const agenda = document.querySelector('.agenda-container'); agenda.style.display = 'none'; $('mainContent').style.gridTemplateRows = '0px 1fr'; renderCRM(); openCrmEditor(contact.id); }
+                        action: () => { closeGlobalSearch(); state.view = 'crm'; localStorage.setItem('cc_current_view', 'crm'); document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=crm]')?.classList.add('active'); const agenda = document.querySelector('.agenda-container'); agenda.style.display = 'none'; $('mainContent').style.gridTemplateRows = '0px auto 1fr'; renderCRM(); openCrmEditor(contact.id); }
                     });
                 }
             });
@@ -6209,9 +6362,12 @@
             const hideAgenda = state.view === 'docs' || state.view === 'calendar' || state.view === 'ideas' || state.view === 'crm' || state.view === 'radar';
             if (hideAgenda) {
                 document.querySelector('.agenda-container').style.display = 'none';
-                $('mainContent').style.gridTemplateRows = '0px 1fr';
-            } else if (state.view === 'dashboard') {
-                $('mainContent').style.gridTemplateRows = '1fr 1fr';
+                $('agendaResizeHandle').style.display = 'none';
+                $('mainContent').style.gridTemplateRows = '0px auto 1fr';
+            } else {
+                document.querySelector('.agenda-container').style.display = '';
+                $('agendaResizeHandle').style.display = '';
+                $('mainContent').style.gridTemplateRows = 'var(--agenda-height, 300px) auto 1fr';
             }
             if (state.view === 'dashboard') renderDashboard();
             else if (state.view === 'playbooks') renderPlaybooks();
@@ -6246,13 +6402,12 @@
                     const hideAgenda = state.view === 'docs' || state.view === 'calendar' || state.view === 'ideas' || state.view === 'crm' || state.view === 'radar';
                     if (hideAgenda) {
                         agenda.style.display = 'none';
-                        main.style.gridTemplateRows = '0px 1fr';
-                    } else if (state.view === 'dashboard') {
-                        agenda.style.display = '';
-                        main.style.gridTemplateRows = '1fr 1fr';
+                        $('agendaResizeHandle').style.display = 'none';
+                        main.style.gridTemplateRows = '0px auto 1fr';
                     } else {
                         agenda.style.display = '';
-                        main.style.gridTemplateRows = '300px 1fr';
+                        $('agendaResizeHandle').style.display = '';
+                        main.style.gridTemplateRows = 'var(--agenda-height, 300px) auto 1fr';
                     }
                     if (state.view === 'dashboard') renderDashboard();
                     if (state.view === 'playbooks') renderPlaybooks();
@@ -6313,12 +6468,85 @@
                 localStorage.setItem('cc_chat_width', parseInt(width));
             });
 
+            // Agenda panel resize
+            const agendaHandle = $('agendaResizeHandle');
+            let agendaResizing = false;
+            const savedAgendaHeight = localStorage.getItem('cc_agenda_height');
+            if (savedAgendaHeight) {
+                mainContent.style.setProperty('--agenda-height', savedAgendaHeight + 'px');
+            }
+            agendaHandle.addEventListener('mousedown', (e) => {
+                agendaResizing = true;
+                agendaHandle.classList.add('dragging');
+                document.body.style.cursor = 'row-resize';
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            });
+            document.addEventListener('mousemove', (e) => {
+                if (!agendaResizing) return;
+                const mainRect = mainContent.getBoundingClientRect();
+                const newHeight = Math.max(100, Math.min(600, e.clientY - mainRect.top));
+                mainContent.style.setProperty('--agenda-height', newHeight + 'px');
+            });
+            document.addEventListener('mouseup', () => {
+                if (!agendaResizing) return;
+                agendaResizing = false;
+                agendaHandle.classList.remove('dragging');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                const height = getComputedStyle(mainContent).getPropertyValue('--agenda-height').replace('px','');
+                localStorage.setItem('cc_agenda_height', parseInt(height));
+            });
+
+            // Dashboard column resize
+            let dashResizing = false;
+            const savedDashLeft = localStorage.getItem('cc_dash_left');
+            if (savedDashLeft) {
+                document.documentElement.style.setProperty('--dash-left', savedDashLeft);
+                document.documentElement.style.setProperty('--dash-right', `calc(100% - ${savedDashLeft} - 6px)`);
+            }
+            document.addEventListener('mousedown', (e) => {
+                if (e.target.id === 'dashResizeHandle') {
+                    dashResizing = true;
+                    e.target.classList.add('dragging');
+                    document.body.style.cursor = 'col-resize';
+                    document.body.style.userSelect = 'none';
+                    e.preventDefault();
+                }
+            });
+            document.addEventListener('mousemove', (e) => {
+                if (!dashResizing) return;
+                const handle = $('dashResizeHandle');
+                if (!handle) return;
+                const row = handle.parentElement;
+                const rect = row.getBoundingClientRect();
+                const pct = Math.max(20, Math.min(80, ((e.clientX - rect.left) / rect.width) * 100));
+                document.documentElement.style.setProperty('--dash-left', pct + '%');
+                document.documentElement.style.setProperty('--dash-right', (100 - pct) + '%');
+            });
+            document.addEventListener('mouseup', () => {
+                if (!dashResizing) return;
+                dashResizing = false;
+                const handle = $('dashResizeHandle');
+                if (handle) handle.classList.remove('dragging');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                const left = getComputedStyle(document.documentElement).getPropertyValue('--dash-left').trim();
+                localStorage.setItem('cc_dash_left', left);
+            });
+
             // Global search
             $('openSearch').onclick = () => openGlobalSearch();
             document.addEventListener('keydown', (e) => {
                 if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
                     e.preventDefault();
                     openGlobalSearch();
+                }
+                if ((e.metaKey || e.ctrlKey) && e.key === '0') {
+                    e.preventDefault();
+                    localStorage.setItem('cc_font_size', '14');
+                    applyFontSize(14);
+                    showToast('Font size reset');
                 }
                 if (e.key === 'Escape' && $('searchOverlay').classList.contains('open')) {
                     closeGlobalSearch();
@@ -6329,6 +6557,9 @@
                 $('openaiKeyInput').value = localStorage.getItem('cc_openai_key') || '';
                 $('claudeKeyInput').value = localStorage.getItem('cc_claude_key') || '';
                 $('grokKeyInput').value = localStorage.getItem('cc_grok_key') || '';
+                const savedSize = localStorage.getItem('cc_font_size') || '14';
+                $('fontSizeSlider').value = savedSize;
+                $('fontSizeLabel').textContent = savedSize + 'px';
                 openModal('settingsModal');
             };
 
@@ -6336,8 +6567,11 @@
                 localStorage.setItem('cc_openai_key', $('openaiKeyInput').value.trim());
                 localStorage.setItem('cc_claude_key', $('claudeKeyInput').value.trim());
                 localStorage.setItem('cc_grok_key', $('grokKeyInput').value.trim());
+                const fontSize = $('fontSizeSlider').value;
+                localStorage.setItem('cc_font_size', fontSize);
+                applyFontSize(fontSize);
                 closeModal('settingsModal');
-                showToast('API keys saved');
+                showToast('Settings saved');
             };
 
             $('btnResetData').onclick = async () => {
@@ -6381,6 +6615,25 @@
             const logoPath = "logo.png";
             $('appLogo').src = logoPath;
         }
+
+        function applyFontSize(size) {
+            const scale = size / 14;
+            const wrapper = document.getElementById('appWrapper');
+            if (wrapper) {
+                wrapper.style.zoom = scale;
+                wrapper.style.height = (100 / scale) + 'vh';
+                wrapper.style.width = (100 / scale) + 'vw';
+            }
+        }
+        function previewFontSize(size) {
+            $('fontSizeLabel').textContent = size + 'px';
+            applyFontSize(size);
+        }
+        // Apply saved font size immediately
+        (function() {
+            const saved = localStorage.getItem('cc_font_size');
+            if (saved) applyFontSize(saved);
+        })();
 
         window.onload = async () => {
             // API key set via Settings page — not hardcoded for security

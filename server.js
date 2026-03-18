@@ -446,10 +446,10 @@ app.get('/api/ideas', async (req, res) => {
 });
 
 app.post('/api/ideas', async (req, res) => {
-  const { title, body, color, category, status, company, pinned } = req.body;
+  const { title, body, color, category, status, company, pinned, project, version } = req.body;
   const { data, error } = await supabase
     .from('ideas')
-    .insert({ title, body, color, category, status, company, pinned })
+    .insert({ title, body, color, category, status, company, pinned, project, version })
     .select()
     .single();
   if (error) return res.status(500).json({ error: error.message });

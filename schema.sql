@@ -65,6 +65,22 @@ create table if not exists radar_updates (
   created_at timestamptz default now()
 );
 
+-- Ideas / Product Board
+create table if not exists ideas (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  body text,
+  color text default '#6366F1',
+  category text,
+  status text default 'spark',
+  company text,
+  pinned boolean default false,
+  project text,
+  version text,
+  created_at timestamptz default now()
+);
+alter table ideas disable row level security;
+
 -- Radar Prompts (saved prompt library)
 create table if not exists radar_prompts (
   id uuid primary key default gen_random_uuid(),
