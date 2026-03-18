@@ -65,6 +65,14 @@ create table if not exists radar_updates (
   created_at timestamptz default now()
 );
 
+-- Radar Prompts (saved prompt library)
+create table if not exists radar_prompts (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  text text not null,
+  created_at timestamptz default now()
+);
+
 -- Disable RLS on all tables (single-operator app, server-side only access)
 alter table companies disable row level security;
 alter table playbooks disable row level security;
@@ -73,3 +81,4 @@ alter table logs disable row level security;
 alter table chat_messages disable row level security;
 alter table tools disable row level security;
 alter table radar_updates disable row level security;
+alter table radar_prompts disable row level security;

@@ -607,6 +607,36 @@ app.post('/api/chat/gemini', async (req, res) => {
 // ─────────────────────────────────────────
 // RADAR (authenticated GET)
 // ─────────────────────────────────────────
+// ─────────────────────────────────────────
+// RADAR PROMPTS
+// ─────────────────────────────────────────
+app.get('/api/radar/prompts', async (req, res) => {
+  const { data, error } = await supabase
+    .from('radar_prompts')
+    .select('*')
+    .order('created_at');
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.post('/api/radar/prompts', async (req, res) => {
+  const { name, text } = req.body;
+  if (!name || !text) return res.status(400).json({ error: 'Name and text are required' });
+  const { data, error } = await supabase
+    .from('radar_prompts')
+    .upsert({ name, text }, { onConflict: 'name' })
+    .select()
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.delete('/api/radar/prompts/:id', async (req, res) => {
+  const { error } = await supabase.from('radar_prompts').delete().eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
 app.get('/api/radar', async (req, res) => {
   const { data, error } = await supabase
     .from('radar_updates')

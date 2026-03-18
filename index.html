@@ -2447,7 +2447,8 @@
             recurringTasks: [],
             recurringCompletions: [],
             plannerWeekOffset: 0,
-            radarUpdates: []
+            radarUpdates: [],
+            radarPrompts: []
         };
 
         const SEED_PLAYBOOKS = [
@@ -2667,7 +2668,7 @@
             try {
                 const safeGet = (path) => api.get(path).catch((e) => { if (e.message === 'Session expired') throw e; return []; });
                 const todayDate = new Date().toISOString().split('T')[0];
-                const [companies, playbooks, tasks, logs, chat, tools, docs, chatSessions, events, ideas, contacts, recurringTasks, recurringCompletions, radarUpdates] = await Promise.all([
+                const [companies, playbooks, tasks, logs, chat, tools, docs, chatSessions, events, ideas, contacts, recurringTasks, recurringCompletions, radarUpdates, radarPrompts] = await Promise.all([
                     safeGet('/api/companies'),
                     safeGet('/api/playbooks'),
                     safeGet('/api/tasks'),
@@ -2681,7 +2682,8 @@
                     safeGet('/api/contacts'),
                     safeGet('/api/recurring-tasks'),
                     safeGet(`/api/recurring-completions?date=${todayDate}`),
-                    safeGet('/api/radar')
+                    safeGet('/api/radar'),
+                    safeGet('/api/radar/prompts')
                 ]);
 
                 // Seed defaults if DB is empty
@@ -2717,6 +2719,7 @@
                 state.recurringTasks = recurringTasks;
                 state.recurringCompletions = recurringCompletions;
                 state.radarUpdates = radarUpdates;
+                state.radarPrompts = radarPrompts;
 
                 $('chatStatus').innerText = 'Online — DB connected';
                 logMissedRecurringTasks();
@@ -3507,12 +3510,19 @@
                 <span><i class="fa-solid fa-clock"></i> Updated ${updated}</span>
             `;
 
-            // Body
+            // Body — detect markdown and render it prettily
             const content = doc.content || '';
-            if (content.replace(/<[^>]*>/g, '').trim() === '') {
+            const plainText = content.replace(/<[^>]*>/g, '').trim();
+            if (plainText === '') {
                 $('docViewBody').innerHTML = `<div class="doc-viewer-empty"><i class="fa-solid fa-file-lines"></i>This document is empty.<br><span style="font-size: 14px; margin-top: 8px; display: inline-block;">Click the edit button to add content.</span></div>`;
             } else {
-                $('docViewBody').innerHTML = content;
+                // Check if content looks like markdown (has markdown syntax patterns)
+                const looksLikeMarkdown = /^#{1,3}\s|^\-{3,}$|^\*\*|^[-*]\s|^>\s|^```|^\d+\.\s/m.test(plainText);
+                if (looksLikeMarkdown) {
+                    $('docViewBody').innerHTML = `<div style="font-size: 14px; line-height: 1.7; color: var(--text-primary);">${formatChatContent(plainText)}</div>`;
+                } else {
+                    $('docViewBody').innerHTML = content;
+                }
             }
 
             $('docViewerOverlay').style.display = 'flex';
@@ -3611,10 +3621,21 @@
         };
 
         const deleteCurrentDoc = async () => {
-            if (!state.editingDoc || !confirm('Delete this document?')) return;
+            if (!state.editingDoc) return;
+            // Double-click guard: first click arms, second click deletes
+            if (!state._docDeleteArmed || state._docDeleteArmedId !== state.editingDoc.id) {
+                state._docDeleteArmed = true;
+                state._docDeleteArmedId = state.editingDoc.id;
+                showToast('Click delete again to confirm');
+                setTimeout(() => { state._docDeleteArmed = false; state._docDeleteArmedId = null; }, 3000);
+                return;
+            }
+            state._docDeleteArmed = false;
+            state._docDeleteArmedId = null;
+            const docId = state.editingDoc.id;
             try {
-                await api.del(`/api/docs/${state.editingDoc.id}`);
-                state.docs = state.docs.filter(d => d.id !== state.editingDoc.id);
+                await api.del(`/api/docs/${docId}`);
+                state.docs = state.docs.filter(d => d.id !== docId);
                 closeDocViewer();
                 closeModal('docEditorModal');
                 renderDocs();
@@ -5825,28 +5846,15 @@
         };
 
         // --- RADAR VIEW ---
-        function getRadarPrompts() {
-            return JSON.parse(localStorage.getItem('radarPrompts') || '[]');
-        }
-        function saveRadarPrompt(name, text) {
-            const prompts = getRadarPrompts();
-            const existing = prompts.findIndex(p => p.name === name);
-            if (existing >= 0) prompts[existing].text = text;
-            else prompts.push({ name, text });
-            localStorage.setItem('radarPrompts', JSON.stringify(prompts));
-        }
-        function deleteRadarPrompt(name) {
-            const prompts = getRadarPrompts().filter(p => p.name !== name);
-            localStorage.setItem('radarPrompts', JSON.stringify(prompts));
-        }
+        // Radar prompts are stored in state.radarPrompts (loaded from DB)
 
         function renderRadar() {
             const view = $('dynamicView');
             const updates = state.radarUpdates || [];
             const cities = ['Toronto', 'Montreal', 'New York', 'Miami', 'General'];
             const selectedCity = state.radarCity || 'Toronto';
+            const savedPrompts = state.radarPrompts || [];
             const defaultPrompt = `Radar Check: What's happening in ${selectedCity} queer nightlife right now? Cover: new parties/events this week, venue buzz, scene shifts, any promoter or creator activity worth noting. Be specific — names, dates, venues. Skip anything you're not confident about.`;
-            const savedPrompts = getRadarPrompts();
             view.innerHTML = `
                 <div style="padding: 24px; max-width: 800px; margin: 0 auto;">
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
@@ -5858,21 +5866,26 @@
                             <select id="radarCitySelect" onchange="state.radarCity = this.value; renderRadar();" style="background: var(--bg); color: var(--text-primary); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; flex-shrink: 0;">
                                 ${cities.map(c => `<option value="${c}" ${c === selectedCity ? 'selected' : ''}>${c}</option>`).join('')}
                             </select>
-                            <select id="radarPromptSelect" onchange="loadRadarPrompt(this.value)" style="background: var(--bg); color: var(--text-primary); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; flex: 1; min-width: 120px;">
-                                <option value="">Default prompt</option>
-                                ${savedPrompts.map(p => `<option value="${p.name}">${p.name}</option>`).join('')}
-                            </select>
-                            <button class="btn-chat-action" onclick="saveCurrentRadarPrompt()" title="Save prompt" style="flex-shrink: 0;">
-                                <i class="fa-solid fa-floppy-disk"></i>
-                            </button>
-                            <button class="btn-chat-action" onclick="deleteCurrentRadarPrompt()" title="Delete saved prompt" style="flex-shrink: 0; opacity: 0.6;">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
                             <button id="radarScanBtn" class="btn-chat-action" onclick="scanRadar()" style="flex-shrink: 0;">
                                 <i class="fa-solid fa-satellite-dish"></i> Scan
                             </button>
                         </div>
                         <textarea id="radarPrompt" rows="3" style="width: 100%; background: var(--bg); color: var(--text-primary); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 13px; resize: vertical; font-family: inherit; box-sizing: border-box;">${state.radarPromptText || defaultPrompt}</textarea>
+                        <div style="display: flex; gap: 8px; margin-top: 10px; align-items: center; flex-wrap: wrap;">
+                            <input id="radarPromptName" type="text" placeholder="Prompt name…" value="${state.radarPromptName || ''}" style="background: var(--bg); color: var(--text-primary); border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px; font-size: 13px; flex: 1; min-width: 140px; font-family: inherit;">
+                            <button class="btn-chat-action" onclick="saveCurrentRadarPrompt()" title="Save prompt" style="flex-shrink: 0;">
+                                <i class="fa-solid fa-floppy-disk"></i> Save
+                            </button>
+                            <select id="radarPromptSelect" onchange="loadRadarPrompt(this.value)" style="background: var(--bg); color: var(--text-primary); border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px; font-size: 13px; min-width: 120px;">
+                                <option value="default" ${!state.radarSelectedPromptId || state.radarSelectedPromptId === 'default' ? 'selected' : ''}>Default</option>
+                                ${savedPrompts.map(p => `<option value="${p.id}" ${state.radarSelectedPromptId === p.id ? 'selected' : ''}>${p.name}</option>`).join('')}
+                            </select>
+                            ${savedPrompts.length > 0 ? `
+                                <button class="btn-chat-action" onclick="deleteCurrentRadarPrompt()" title="Delete selected prompt" style="flex-shrink: 0; opacity: 0.6;">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            ` : ''}
+                        </div>
                     </div>
                     ${updates.length === 0 ? `
                         <div style="text-align: center; padding: 60px 20px; color: var(--text-secondary);">
@@ -5916,41 +5929,60 @@
             }
         }
 
-        function loadRadarPrompt(name) {
-            if (!name) {
+        function loadRadarPrompt(id) {
+            if (!id || id === 'default') {
                 state.radarPromptText = '';
+                state.radarPromptName = '';
+                state.radarSelectedPromptId = 'default';
                 renderRadar();
                 return;
             }
-            const prompts = getRadarPrompts();
-            const found = prompts.find(p => p.name === name);
+            const found = (state.radarPrompts || []).find(p => p.id === id);
             if (found) {
-                state.radarPromptText = found.text;
+                state.radarPromptText = found.text.replace(/\{city\}/g, state.radarCity || 'Toronto');
+                state.radarPromptName = found.name;
+                state.radarSelectedPromptId = found.id;
                 renderRadar();
-                $('radarPromptSelect').value = name;
             }
         }
 
-        function saveCurrentRadarPrompt() {
+        async function saveCurrentRadarPrompt() {
             const text = $('radarPrompt').value.trim();
             if (!text) return showToast('Prompt is empty');
-            const name = window.prompt('Name this prompt:');
-            if (!name || !name.trim()) return;
-            saveRadarPrompt(name.trim(), text);
-            state.radarPromptText = text;
-            renderRadar();
-            $('radarPromptSelect').value = name.trim();
-            showToast('Prompt saved');
+            const name = $('radarPromptName').value.trim();
+            if (!name) return showToast('Enter a name for the prompt');
+            try {
+                const saved = await api.post('/api/radar/prompts', { name, text });
+                const idx = (state.radarPrompts || []).findIndex(p => p.name === name);
+                if (idx >= 0) state.radarPrompts[idx] = saved;
+                else state.radarPrompts.push(saved);
+                state.radarPromptText = text;
+                state.radarPromptName = name;
+                state.radarSelectedPromptId = saved.id;
+                renderRadar();
+                showToast('Prompt "' + name + '" saved');
+            } catch (e) {
+                showToast('Failed to save prompt');
+            }
         }
 
-        function deleteCurrentRadarPrompt() {
-            const select = $('radarPromptSelect');
-            const name = select.value;
-            if (!name) return showToast('Select a saved prompt to delete');
-            deleteRadarPrompt(name);
-            state.radarPromptText = '';
-            renderRadar();
-            showToast('Prompt deleted');
+        async function deleteCurrentRadarPrompt() {
+            const name = $('radarPromptName').value.trim();
+            if (!name) return showToast('Enter the name of the prompt to delete');
+            const prompts = state.radarPrompts || [];
+            const found = prompts.find(p => p.name === name);
+            if (!found) return showToast('No saved prompt named "' + name + '"');
+            try {
+                await api.del('/api/radar/prompts/' + found.id);
+                state.radarPrompts = prompts.filter(p => p.id !== found.id);
+                state.radarPromptText = '';
+                state.radarPromptName = '';
+                state.radarSelectedPromptId = 'default';
+                renderRadar();
+                showToast('Prompt "' + name + '" deleted');
+            } catch (e) {
+                showToast('Failed to delete prompt');
+            }
         }
 
         async function refreshRadar() {
