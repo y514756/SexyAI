@@ -1235,6 +1235,7 @@
             flex: 1; overflow-y: auto; padding: 12px; display: flex;
             flex-direction: column; gap: 10px;
         }
+        .idea-card[draggable]:active { cursor: grabbing; }
         .idea-archived-toggle {
             display: flex; align-items: center; gap: 8px; padding: 8px 14px;
             background: var(--surface); border: var(--border); border-radius: 8px;
@@ -4267,11 +4268,52 @@
         const IDEA_STATUS_LABELS = { spark: 'Spark', exploring: 'Exploring', actionable: 'Actionable', done: 'Done' };
         const IDEA_STATUS_COLORS = { spark: '#F59E0B', exploring: '#6366F1', actionable: '#10B981', done: '#8B5CF6' };
 
+        function onIdeaDragStart(e, id) {
+            e.dataTransfer.setData('text/plain', id);
+            e.dataTransfer.effectAllowed = 'move';
+            e.target.style.opacity = '0.5';
+            setTimeout(() => { if (e.target) e.target.style.opacity = ''; }, 200);
+        }
+
+        async function onIdeaDrop(e, newStatus) {
+            e.preventDefault();
+            e.stopPropagation();
+            const id = e.dataTransfer.getData('text/plain');
+            if (!id) return;
+            const idea = state.ideas.find(i => i.id === id);
+            if (!idea || idea.status === newStatus) return;
+            const prevStatus = idea.status;
+            try {
+                const updated = await api.patch(`/api/ideas/${id}`, { status: newStatus });
+                const idx = state.ideas.findIndex(i => i.id === id);
+                if (idx !== -1) state.ideas[idx] = { ...state.ideas[idx], ...updated };
+
+                // Log status transitions
+                const projectLabel = idea.project ? ` [${idea.project}${idea.version ? ' ' + idea.version : ''}]` : '';
+                const suffix = idea.company ? ' — ' + idea.company : '';
+                if (prevStatus !== 'actionable' && newStatus === 'actionable') {
+                    const log = await api.post('/api/logs', { content: `Moved to Actionable: <strong>${idea.title}</strong>${projectLabel}${suffix}`, timestamp: Date.now(), agent: 'product-board' });
+                    state.logs.push(log);
+                }
+                if (prevStatus !== 'done' && newStatus === 'done') {
+                    const log = await api.post('/api/logs', { content: `Completed: <strong>${idea.title}</strong>${projectLabel}${suffix}`, timestamp: Date.now(), agent: 'product-board' });
+                    state.logs.push(log);
+                }
+
+                renderIdeas();
+                showToast(`Moved to ${newStatus}`);
+            } catch (err) {
+                showToast('Failed to move: ' + err.message);
+            }
+        }
+
         const renderIdeaCard = (idea) => {
             const color = idea.color || '#6366F1';
             return `
                 <div class="idea-card" onclick="openIdeaEditor('${idea.id}')"
-                    style="background: ${color}18; border-left-color: ${color};">
+                    draggable="true" data-idea-id="${idea.id}"
+                    ondragstart="onIdeaDragStart(event, '${idea.id}')"
+                    style="background: ${color}18; border-left-color: ${color}; cursor: grab;">
                     ${idea.pinned ? '<div class="idea-card-pin"><i class="fa-solid fa-thumbtack"></i></div>' : ''}
                     <div class="idea-card-title">${idea.title}</div>
                     ${idea.body ? `<div class="idea-card-body">${idea.body.replace(/<[^>]*>/g, '').substring(0, 120)}</div>` : ''}
@@ -4368,7 +4410,10 @@
 
                 <div class="idea-pipeline">
                     ${columns.map(col => `
-                        <div class="idea-column">
+                        <div class="idea-column" data-status="${col.key}"
+                            ondragover="event.preventDefault(); this.style.outline='2px solid var(--accent)';"
+                            ondragleave="this.style.outline='';"
+                            ondrop="onIdeaDrop(event, '${col.key}'); this.style.outline='';">
                             <div class="idea-column-header">
                                 <div class="idea-column-title">
                                     <i class="fa-solid ${col.icon}" style="color: ${col.color};"></i>
@@ -4376,9 +4421,11 @@
                                 </div>
                                 <span class="idea-column-count">${col.items.length}</span>
                             </div>
-                            <div class="idea-column-cards">
+                            <div class="idea-column-cards"
+                                ondragover="event.preventDefault();"
+                                ondrop="onIdeaDrop(event, '${col.key}'); this.parentElement.style.outline='';">
                                 ${col.items.length === 0
-                                    ? `<div style="text-align: center; color: var(--text-dim); font-size: 13px; padding: 20px 0; opacity: 0.6;">No ideas here</div>`
+                                    ? `<div style="text-align: center; color: var(--text-dim); font-size: 13px; padding: 20px 0; opacity: 0.6;">Drop items here</div>`
                                     : col.items.map(renderIdeaCard).join('')}
                             </div>
                         </div>
@@ -4529,6 +4576,8 @@
                 pinned: state.editingIdea ? state.editingIdea.pinned : false
             };
             try {
+                const prevStatus = state.editingIdea ? state.editingIdea.status : null;
+                const newStatus = payload.status;
                 if (state.editingIdea) {
                     const updated = await api.patch(`/api/ideas/${state.editingIdea.id}`, payload);
                     const idx = state.ideas.findIndex(i => i.id === state.editingIdea.id);
@@ -4537,10 +4586,21 @@
                     const created = await api.post('/api/ideas', payload);
                     state.ideas.unshift(created);
                 }
+                // Log to work log on status transitions
+                const projectLabel = payload.project ? ` [${payload.project}${payload.version ? ' ' + payload.version : ''}]` : '';
+                const suffix = payload.company ? ' — ' + payload.company : '';
+                if (prevStatus !== 'actionable' && newStatus === 'actionable') {
+                    const log = await api.post('/api/logs', { content: `Moved to Actionable: <strong>${title}</strong>${projectLabel}${suffix}`, timestamp: Date.now(), agent: 'product-board' });
+                    state.logs.push(log);
+                }
+                if (prevStatus !== 'done' && newStatus === 'done') {
+                    const log = await api.post('/api/logs', { content: `Completed: <strong>${title}</strong>${projectLabel}${suffix}`, timestamp: Date.now(), agent: 'product-board' });
+                    state.logs.push(log);
+                }
                 closeModal('ideaEditorModal');
                 renderIdeas();
                 renderSidebar();
-                showToast(state.editingIdea ? 'Idea updated' : 'Idea created');
+                showToast(state.editingIdea ? 'Item updated' : 'Item created');
             } catch (err) {
                 console.error('Save idea error:', err);
                 showToast('Failed to save idea: ' + err.message);
