@@ -57,6 +57,14 @@ create table if not exists tools (
   created_at timestamptz default now()
 );
 
+-- Radar Updates (nightlife intel from Make.com webhook)
+create table if not exists radar_updates (
+  id uuid primary key default gen_random_uuid(),
+  city text not null default 'General',
+  content text not null,
+  created_at timestamptz default now()
+);
+
 -- Disable RLS on all tables (single-operator app, server-side only access)
 alter table companies disable row level security;
 alter table playbooks disable row level security;
@@ -64,3 +72,4 @@ alter table tasks disable row level security;
 alter table logs disable row level security;
 alter table chat_messages disable row level security;
 alter table tools disable row level security;
+alter table radar_updates disable row level security;

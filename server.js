@@ -569,6 +569,99 @@ app.delete('/api/recurring-completions/:id', async (req, res) => {
 });
 
 // ─────────────────────────────────────────
+// GEMINI PROXY
+// ─────────────────────────────────────────
+app.post('/api/chat/gemini', async (req, res) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured on server' });
+  const { messages, systemPrompt } = req.body;
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: messages.map(m => ({
+            role: m.role === 'user' ? 'user' : 'model',
+            parts: [{ text: m.content }]
+          })),
+          tools: [{ googleSearch: {} }],
+          generationConfig: { temperature: 0.85, topP: 0.95, topK: 40, maxOutputTokens: 300, responseMimeType: 'text/plain' }
+        })
+      }
+    );
+    if (!response.ok) {
+      const errText = await response.text();
+      return res.status(response.status).json({ error: errText.substring(0, 500) });
+    }
+    const data = await response.json();
+    const text = data.candidates[0].content.parts[0].text;
+    res.json({ text });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────
+// RADAR (authenticated GET)
+// ─────────────────────────────────────────
+app.get('/api/radar', async (req, res) => {
+  const { data, error } = await supabase
+    .from('radar_updates')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.post('/api/radar/scan', async (req, res) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured on server' });
+
+  const { city = 'Toronto', prompt } = req.body;
+  const defaultPrompt = `Radar Check: What's happening in ${city} queer nightlife right now? Cover: new parties/events this week, venue buzz, scene shifts, any promoter or creator activity worth noting. Be specific — names, dates, venues. Skip anything you're not confident about.`;
+  const userPrompt = prompt || defaultPrompt;
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: 'You are a nightlife radar intelligence agent. Your job is to scan the web for the latest queer nightlife activity in a given city. Be punchy, specific, and useful. Include names, dates, venues, and links when possible. Use google_search to ground your responses in real, current information. Skip anything you cannot verify.' }] },
+          contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+          tools: [{ googleSearch: {} }],
+          generationConfig: { temperature: 0.85, topP: 0.95, topK: 40, responseMimeType: 'text/plain' }
+        })
+      }
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      return res.status(response.status).json({ error: errText.substring(0, 500) });
+    }
+
+    const geminiData = await response.json();
+    const candidate = geminiData.candidates[0];
+    const text = candidate.content.parts.filter(p => p.text).map(p => p.text).join('\n');
+
+    const { data, error } = await supabase
+      .from('radar_updates')
+      .insert({ content: text, city })
+      .select()
+      .single();
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────
 // Reset everything
 // ─────────────────────────────────────────
 app.delete('/api/reset', async (req, res) => {
@@ -586,6 +679,7 @@ app.delete('/api/reset', async (req, res) => {
     await supabase.from('contacts').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     await supabase.from('recurring_completions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     await supabase.from('recurring_tasks').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('radar_updates').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -1523,7 +1523,7 @@
     <div id="authScreen" style="
         position: fixed; inset: 0; z-index: 99999;
         background: var(--bg);
-        display: flex; align-items: center; justify-content: center;
+        display: none; align-items: center; justify-content: center;
         font-family: 'Outfit', sans-serif;
     ">
         <div style="
@@ -1576,6 +1576,7 @@
             <div class="nav-icon" data-view="calendar" title="Calendar"><i class="fa-solid fa-calendar-days"></i></div>
             <div class="nav-icon" data-view="ideas" title="Idea Box"><i class="fa-solid fa-lightbulb"></i></div>
             <div class="nav-icon" data-view="crm" title="CRM"><i class="fa-solid fa-address-book"></i></div>
+            <div class="nav-icon" data-view="radar" title="Nightlife Radar"><i class="fa-solid fa-satellite-dish"></i></div>
         </div>
         <div class="nav-icon" id="openSearch" title="Search (⌘K)"><i class="fa-solid fa-magnifying-glass"></i></div>
         <div class="nav-icon" id="openSettings" title="Settings" style="margin-top: auto;"><i class="fa-solid fa-gear"></i></div>
@@ -1679,9 +1680,8 @@
                 <i class="fa-solid fa-times" style="cursor: pointer;" onclick="closeModal('settingsModal')"></i>
             </div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label><span class="tab-dot" style="background: #4285F4; display: inline-block; width: 6px; height: 6px; border-radius: 50; vertical-align: middle; margin-right: 6px;"></span>Gemini API Key</label>
-                    <input type="password" id="apiKeyInput" placeholder="Google AI Studio key...">
+                <div class="form-group" style="padding: 10px; background: var(--surface); border-radius: 8px; margin-bottom: 12px;">
+                    <span style="color: var(--text-secondary); font-size: 13px;"><i class="fa-solid fa-check-circle" style="color: #4285F4; margin-right: 6px;"></i>Gemini — server-side (no key needed)</span>
                 </div>
                 <div class="form-group">
                     <label><span class="tab-dot" style="background: #10B981; display: inline-block; width: 6px; height: 6px; border-radius: 50%; vertical-align: middle; margin-right: 6px;"></span>OpenAI API Key</label>
@@ -2446,7 +2446,8 @@
             crmViewMode: 'pipeline',
             recurringTasks: [],
             recurringCompletions: [],
-            plannerWeekOffset: 0
+            plannerWeekOffset: 0,
+            radarUpdates: []
         };
 
         const SEED_PLAYBOOKS = [
@@ -2666,7 +2667,7 @@
             try {
                 const safeGet = (path) => api.get(path).catch((e) => { if (e.message === 'Session expired') throw e; return []; });
                 const todayDate = new Date().toISOString().split('T')[0];
-                const [companies, playbooks, tasks, logs, chat, tools, docs, chatSessions, events, ideas, contacts, recurringTasks, recurringCompletions] = await Promise.all([
+                const [companies, playbooks, tasks, logs, chat, tools, docs, chatSessions, events, ideas, contacts, recurringTasks, recurringCompletions, radarUpdates] = await Promise.all([
                     safeGet('/api/companies'),
                     safeGet('/api/playbooks'),
                     safeGet('/api/tasks'),
@@ -2679,7 +2680,8 @@
                     safeGet('/api/ideas'),
                     safeGet('/api/contacts'),
                     safeGet('/api/recurring-tasks'),
-                    safeGet(`/api/recurring-completions?date=${todayDate}`)
+                    safeGet(`/api/recurring-completions?date=${todayDate}`),
+                    safeGet('/api/radar')
                 ]);
 
                 // Seed defaults if DB is empty
@@ -2714,6 +2716,7 @@
                 state.contacts = contacts;
                 state.recurringTasks = recurringTasks;
                 state.recurringCompletions = recurringCompletions;
+                state.radarUpdates = radarUpdates;
 
                 $('chatStatus').innerText = 'Online — DB connected';
                 logMissedRecurringTasks();
@@ -5353,22 +5356,8 @@
             gemini: {
                 name: 'Gemini',
                 call: async (messages, apiKey, systemPrompt) => {
-                    const contents = messages.map(m => ({
-                        role: m.role === 'user' ? 'user' : 'model',
-                        parts: [{ text: m.content }]
-                    }));
-                    const res = await fetch(
-                        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-                        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-                            systemInstruction: { parts: [{ text: systemPrompt }] },
-                            contents,
-                            tools: [{ googleSearch: {} }],
-                            generationConfig: { temperature: 0.85, topP: 0.95, topK: 40, maxOutputTokens: 300, responseMimeType: 'text/plain' }
-                        }) }
-                    );
-                    if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).substring(0, 200)}`);
-                    const data = await res.json();
-                    return data.candidates[0].content.parts[0].text;
+                    const res = await api.post('/api/chat/gemini', { messages, systemPrompt });
+                    return res.text;
                 }
             },
             openai: {
@@ -5583,8 +5572,8 @@
 
         async function callAgent(prompt, history) {
             const agent = state.activeAgent;
-            const keyMap = { gemini: 'cc_api_key', openai: 'cc_openai_key', claude: 'cc_claude_key', grok: 'cc_grok_key' };
-            const apiKey = (localStorage.getItem(keyMap[agent]) || '').trim();
+            const keyMap = { openai: 'cc_openai_key', claude: 'cc_claude_key', grok: 'cc_grok_key' };
+            const apiKey = agent === 'gemini' ? 'server' : (localStorage.getItem(keyMap[agent]) || '').trim();
             if (!apiKey) { showToast(`${AGENT_CONFIG[agent].name} API key missing. Check Settings.`); return; }
 
             $('chatStatus').innerHTML = `<div class="loader"></div> ${AGENT_CONFIG[agent].name} thinking...`;
@@ -5813,20 +5802,14 @@
         $('btnAutoArchitect').onclick = async () => {
             const name = $('pbName').value;
             if (!name) return showToast('Enter a name for the playbook first');
-            const apiKey = localStorage.getItem('cc_api_key');
-            if (!apiKey) return showToast('API Key required for Auto-Architect');
-
             $('btnAutoArchitect').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Architecting...';
             try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: `Design a professional multi-step prompt playbook named "${name}". Return ONLY a JSON object with strictly these keys: globalInstructions (string), tools (array of strings), steps (array of {label, prompt}). Make the steps strategic and high-value.` }] }]
-                    })
+                const archPrompt = `Design a professional multi-step prompt playbook named "${name}". Return ONLY a JSON object with strictly these keys: globalInstructions (string), tools (array of strings), steps (array of {label, prompt}). Make the steps strategic and high-value.`;
+                const res = await api.post('/api/chat/gemini', {
+                    messages: [{ role: 'user', content: archPrompt }],
+                    systemPrompt: 'You are a playbook architect. Return only valid JSON.'
                 });
-                const data = await response.json();
-                const content = data.candidates[0].content.parts[0].text;
+                const content = res.text;
                 const jsonStr = content.match(/\{[\s\S]*\}/)[0];
                 const pbData = JSON.parse(jsonStr);
                 $('pbGlobal').innerHTML = pbData.globalInstructions;
@@ -5840,6 +5823,145 @@
                 $('btnAutoArchitect').innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Architect';
             }
         };
+
+        // --- RADAR VIEW ---
+        function getRadarPrompts() {
+            return JSON.parse(localStorage.getItem('radarPrompts') || '[]');
+        }
+        function saveRadarPrompt(name, text) {
+            const prompts = getRadarPrompts();
+            const existing = prompts.findIndex(p => p.name === name);
+            if (existing >= 0) prompts[existing].text = text;
+            else prompts.push({ name, text });
+            localStorage.setItem('radarPrompts', JSON.stringify(prompts));
+        }
+        function deleteRadarPrompt(name) {
+            const prompts = getRadarPrompts().filter(p => p.name !== name);
+            localStorage.setItem('radarPrompts', JSON.stringify(prompts));
+        }
+
+        function renderRadar() {
+            const view = $('dynamicView');
+            const updates = state.radarUpdates || [];
+            const cities = ['Toronto', 'Montreal', 'New York', 'Miami', 'General'];
+            const selectedCity = state.radarCity || 'Toronto';
+            const defaultPrompt = `Radar Check: What's happening in ${selectedCity} queer nightlife right now? Cover: new parties/events this week, venue buzz, scene shifts, any promoter or creator activity worth noting. Be specific — names, dates, venues. Skip anything you're not confident about.`;
+            const savedPrompts = getRadarPrompts();
+            view.innerHTML = `
+                <div style="padding: 24px; max-width: 800px; margin: 0 auto;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                        <h2 style="font-size: 20px; font-weight: 700;"><i class="fa-solid fa-satellite-dish" style="margin-right: 8px; color: var(--accent);"></i>Nightlife Radar</h2>
+                        <button class="btn-chat-action" onclick="refreshRadar()"><i class="fa-solid fa-rotate"></i> Refresh</button>
+                    </div>
+                    <div style="background: var(--surface); border-radius: 12px; padding: 16px; margin-bottom: 20px; border: 1px solid var(--border);">
+                        <div style="display: flex; gap: 10px; margin-bottom: 12px; align-items: center; flex-wrap: wrap;">
+                            <select id="radarCitySelect" onchange="state.radarCity = this.value; renderRadar();" style="background: var(--bg); color: var(--text-primary); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; flex-shrink: 0;">
+                                ${cities.map(c => `<option value="${c}" ${c === selectedCity ? 'selected' : ''}>${c}</option>`).join('')}
+                            </select>
+                            <select id="radarPromptSelect" onchange="loadRadarPrompt(this.value)" style="background: var(--bg); color: var(--text-primary); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; flex: 1; min-width: 120px;">
+                                <option value="">Default prompt</option>
+                                ${savedPrompts.map(p => `<option value="${p.name}">${p.name}</option>`).join('')}
+                            </select>
+                            <button class="btn-chat-action" onclick="saveCurrentRadarPrompt()" title="Save prompt" style="flex-shrink: 0;">
+                                <i class="fa-solid fa-floppy-disk"></i>
+                            </button>
+                            <button class="btn-chat-action" onclick="deleteCurrentRadarPrompt()" title="Delete saved prompt" style="flex-shrink: 0; opacity: 0.6;">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                            <button id="radarScanBtn" class="btn-chat-action" onclick="scanRadar()" style="flex-shrink: 0;">
+                                <i class="fa-solid fa-satellite-dish"></i> Scan
+                            </button>
+                        </div>
+                        <textarea id="radarPrompt" rows="3" style="width: 100%; background: var(--bg); color: var(--text-primary); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 13px; resize: vertical; font-family: inherit; box-sizing: border-box;">${state.radarPromptText || defaultPrompt}</textarea>
+                    </div>
+                    ${updates.length === 0 ? `
+                        <div style="text-align: center; padding: 60px 20px; color: var(--text-secondary);">
+                            <i class="fa-solid fa-satellite-dish" style="font-size: 48px; margin-bottom: 16px; opacity: 0.3;"></i>
+                            <p style="font-size: 15px;">No radar updates yet.</p>
+                            <p style="font-size: 13px; margin-top: 8px;">Hit Scan to pull fresh nightlife intel.</p>
+                        </div>
+                    ` : updates.map(u => {
+                        const date = new Date(u.created_at);
+                        const timeStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                        return `
+                            <div style="background: var(--surface); border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid var(--border);">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                                    <span style="background: var(--accent); color: white; font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 20px;">${u.city || 'General'}</span>
+                                    <span style="color: var(--text-secondary); font-size: 12px; margin-left: auto;">${timeStr}</span>
+                                </div>
+                                <div style="font-size: 14px; line-height: 1.6; color: var(--text-primary);">${formatChatContent(u.content)}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        async function scanRadar() {
+            const btn = $('radarScanBtn');
+            const city = $('radarCitySelect').value;
+            const prompt = $('radarPrompt').value.trim();
+            state.radarPromptText = prompt;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Scanning…';
+            try {
+                const newUpdate = await api.post('/api/radar/scan', { city, prompt: prompt || undefined });
+                state.radarUpdates = [newUpdate, ...(state.radarUpdates || [])];
+                renderRadar();
+                showToast('Radar scan complete');
+            } catch (e) {
+                showToast('Scan failed: ' + (e.message || 'unknown error'));
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-satellite-dish"></i> Scan';
+            }
+        }
+
+        function loadRadarPrompt(name) {
+            if (!name) {
+                state.radarPromptText = '';
+                renderRadar();
+                return;
+            }
+            const prompts = getRadarPrompts();
+            const found = prompts.find(p => p.name === name);
+            if (found) {
+                state.radarPromptText = found.text;
+                renderRadar();
+                $('radarPromptSelect').value = name;
+            }
+        }
+
+        function saveCurrentRadarPrompt() {
+            const text = $('radarPrompt').value.trim();
+            if (!text) return showToast('Prompt is empty');
+            const name = window.prompt('Name this prompt:');
+            if (!name || !name.trim()) return;
+            saveRadarPrompt(name.trim(), text);
+            state.radarPromptText = text;
+            renderRadar();
+            $('radarPromptSelect').value = name.trim();
+            showToast('Prompt saved');
+        }
+
+        function deleteCurrentRadarPrompt() {
+            const select = $('radarPromptSelect');
+            const name = select.value;
+            if (!name) return showToast('Select a saved prompt to delete');
+            deleteRadarPrompt(name);
+            state.radarPromptText = '';
+            renderRadar();
+            showToast('Prompt deleted');
+        }
+
+        async function refreshRadar() {
+            try {
+                state.radarUpdates = await api.get('/api/radar');
+                renderRadar();
+                showToast('Radar refreshed');
+            } catch (e) {
+                showToast('Failed to refresh radar');
+            }
+        }
 
         // --- INIT ---
         // --- GLOBAL SEARCH ---
@@ -6052,7 +6174,7 @@
 
             renderSidebar();
             // Render the correct view
-            const hideAgenda = state.view === 'docs' || state.view === 'calendar' || state.view === 'ideas' || state.view === 'crm';
+            const hideAgenda = state.view === 'docs' || state.view === 'calendar' || state.view === 'ideas' || state.view === 'crm' || state.view === 'radar';
             if (hideAgenda) {
                 document.querySelector('.agenda-container').style.display = 'none';
                 $('mainContent').style.gridTemplateRows = '0px 1fr';
@@ -6067,6 +6189,7 @@
             else if (state.view === 'calendar') loadCalendarEvents();
             else if (state.view === 'ideas') renderIdeas();
             else if (state.view === 'crm') renderCRM();
+            else if (state.view === 'radar') renderRadar();
             else renderDashboard();
             renderAgenda();
             renderChat();
@@ -6088,7 +6211,7 @@
                     // Hide agenda on docs view, expand dynamic-view to full height
                     const agenda = document.querySelector('.agenda-container');
                     const main = $('mainContent');
-                    const hideAgenda = state.view === 'docs' || state.view === 'calendar' || state.view === 'ideas' || state.view === 'crm';
+                    const hideAgenda = state.view === 'docs' || state.view === 'calendar' || state.view === 'ideas' || state.view === 'crm' || state.view === 'radar';
                     if (hideAgenda) {
                         agenda.style.display = 'none';
                         main.style.gridTemplateRows = '0px 1fr';
@@ -6107,6 +6230,7 @@
                     if (state.view === 'calendar') { loadCalendarEvents(); }
                     if (state.view === 'ideas') renderIdeas();
                     if (state.view === 'crm') renderCRM();
+                    if (state.view === 'radar') renderRadar();
                 };
             });
 
@@ -6170,7 +6294,6 @@
             });
 
             $('openSettings').onclick = () => {
-                $('apiKeyInput').value = localStorage.getItem('cc_api_key') || '';
                 $('openaiKeyInput').value = localStorage.getItem('cc_openai_key') || '';
                 $('claudeKeyInput').value = localStorage.getItem('cc_claude_key') || '';
                 $('grokKeyInput').value = localStorage.getItem('cc_grok_key') || '';
@@ -6178,12 +6301,11 @@
             };
 
             $('btnSaveSettings').onclick = () => {
-                localStorage.setItem('cc_api_key', $('apiKeyInput').value.trim());
                 localStorage.setItem('cc_openai_key', $('openaiKeyInput').value.trim());
                 localStorage.setItem('cc_claude_key', $('claudeKeyInput').value.trim());
                 localStorage.setItem('cc_grok_key', $('grokKeyInput').value.trim());
                 closeModal('settingsModal');
-                showToast('All API keys saved');
+                showToast('API keys saved');
             };
 
             $('btnResetData').onclick = async () => {
