@@ -775,11 +775,11 @@
             border-radius: 12px;
             color: var(--text-primary);
             box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-            transform: translateY(100px);
-            transition: var(--transition);
             z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(16px);
         }
-        .toast.show { transform: translateY(0); }
 
         /* Dashboard */
         .dash-grid {
@@ -1993,11 +1993,21 @@
         /* ===== MOBILE RESPONSIVE ===== */
         @media (max-width: 768px) {
 
-            /* --- APP WRAPPER: stack vertically --- */
+            /* --- PREVENT HORIZONTAL OVERFLOW & LAYOUT SHIFT --- */
+            html, body {
+                overflow: hidden !important;
+                width: 100% !important;
+                height: 100% !important;
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+            }
+
+            /* --- APP WRAPPER: stack vertically, leave room for bottom nav --- */
             #appWrapper {
                 flex-direction: column !important;
-                height: 100vh !important;
-                height: 100dvh !important;
+                height: 100% !important;
+                overflow: hidden !important;
+                padding-bottom: 56px !important;
             }
 
             /* --- ICON RAIL: bottom tab bar --- */
@@ -2009,23 +2019,29 @@
                 width: 100% !important;
                 height: 56px;
                 flex-direction: row;
+                align-items: center;
+                justify-content: space-around;
                 border-right: none;
                 border-top: var(--border);
-                padding: 0 4px;
+                padding: 0 8px;
                 z-index: 500;
                 background: var(--surface-inset);
                 flex-shrink: 0;
+                overflow: hidden;
             }
 
             /* Logo: show as home button in bottom bar */
             .logo-container {
-                width: 36px;
-                height: 36px;
-                min-width: 36px;
-                margin: 0;
-                font-size: 16px;
+                width: 32px;
+                height: 32px;
+                min-width: 32px;
+                margin: 0 !important;
+                margin-bottom: 0 !important;
+                padding: 0 !important;
+                font-size: 15px;
                 border-radius: 8px;
                 order: -1;
+                flex-shrink: 0;
             }
 
             .nav-icons {
@@ -2146,10 +2162,9 @@
             .main-content {
                 grid-template-columns: 1fr !important;
                 grid-template-rows: auto auto 1fr !important;
-                width: 100%;
-                height: calc(100vh - 56px);
-                height: calc(100dvh - 56px);
-                overflow: hidden;
+                width: 100% !important;
+                height: 100% !important;
+                overflow: hidden !important;
             }
 
             /* --- CHAT PANEL: full-screen overlay --- */
@@ -2410,9 +2425,36 @@
                 right: 16px !important;
                 bottom: 72px !important;
                 max-width: none;
+                font-size: 14px !important;
+                padding: 14px 18px !important;
+                text-align: center;
             }
 
             /* --- TYPOGRAPHY & TOUCH TARGETS --- */
+            body {
+                font-size: 15px !important;
+            }
+            .dynamic-view {
+                font-size: 15px;
+                overflow-x: hidden !important;
+                overflow-y: auto !important;
+                width: 100% !important;
+                max-width: 100vw !important;
+                animation: none !important;
+                min-height: 0 !important;
+                height: 100% !important;
+            }
+            .dynamic-view.view-enter {
+                animation: none !important;
+            }
+            .task-text, .checklist-item-text {
+                font-size: 15px !important;
+            }
+            .activity-item, .scratch-content {
+                font-size: 15px !important;
+            }
+            h1 { font-size: 22px !important; }
+
             button, .btn-send, .btn-add, .btn-step, .btn-chat-action,
             .quick-action, .nav-icon, .cal-nav-btn, .cal-today-btn,
             .checklist-nav-btn, .checklist-today-btn, .crm-filter-pill,
@@ -2455,8 +2497,20 @@
             }
 
             /* Scratch pad */
+            .scratchpad-view {
+                height: 100% !important;
+                max-height: 100% !important;
+                overflow: hidden !important;
+            }
+            .scratch-feed {
+                flex: 1 !important;
+                min-height: 0 !important;
+                overflow-y: auto !important;
+                padding: 16px !important;
+            }
             .scratch-input-bar {
                 padding: 10px 16px 14px;
+                flex-shrink: 0;
             }
 
             /* Recurring tasks form */
