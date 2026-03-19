@@ -1,10 +1,7 @@
-const CACHE_NAME = 'os-command-v1';
-const PRECACHE = ['/', '/icon.svg'];
+const CACHE_NAME = 'os-command-v2';
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then(c => c.addAll(PRECACHE)).then(() => self.skipWaiting())
-  );
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', (e) => {
@@ -16,10 +13,14 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // Network-first for API calls, cache-first for assets
-  if (e.request.url.includes('/api/') || e.request.url.includes('/auth/')) {
-    return; // let network handle API calls
+  const url = new URL(e.request.url);
+
+  // Skip API, auth, and external requests — let browser handle them
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/auth/') || url.origin !== self.location.origin) {
+    return;
   }
+
+  // Network-first for same-origin assets
   e.respondWith(
     fetch(e.request).then(r => {
       const clone = r.clone();
