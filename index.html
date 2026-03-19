@@ -2,8 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AI Command Center | Mission Control</title>
+    <!-- PWA -->
+    <meta name="theme-color" content="#0F0F14">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="OS Command">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="/icon.svg">
+    <link rel="apple-touch-icon" href="/icon.svg">
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -76,10 +84,10 @@
             align-items: center;
             justify-content: center;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            font-size: 20px;
+            font-size: 14px;
             font-weight: 800;
             color: white;
-            letter-spacing: -1px;
+            letter-spacing: -0.5px;
             user-select: none;
         }
         .logo-container:hover { transform: scale(1.1); }
@@ -507,6 +515,9 @@
             font-size: 13px;
             flex-shrink: 0;
         }
+        .mobile-priority-btns { display: none; }
+        .mobile-priority-cycle { display: none; }
+        .mobile-more-menu { display: none; }
         .agenda-input-row .btn-send {
             padding: 0 14px;
             flex-shrink: 0;
@@ -1302,6 +1313,9 @@
         .idea-card-meta {
             display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
         }
+        .idea-mobile-move {
+            display: none;
+        }
         .idea-status-badge {
             font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
             text-transform: uppercase; letter-spacing: 0.5px;
@@ -2020,27 +2034,26 @@
                 height: 56px;
                 flex-direction: row;
                 align-items: center;
-                justify-content: space-around;
+                justify-content: space-evenly;
                 border-right: none;
                 border-top: var(--border);
-                padding: 0 8px;
+                padding: 0 12px;
                 z-index: 500;
                 background: var(--surface-inset);
                 flex-shrink: 0;
                 overflow: hidden;
+                gap: 0;
             }
 
             /* Logo: show as home button in bottom bar */
             .logo-container {
-                width: 32px;
-                height: 32px;
-                min-width: 32px;
+                width: 30px;
+                height: 30px;
+                min-width: 30px;
                 margin: 0 !important;
-                margin-bottom: 0 !important;
                 padding: 0 !important;
-                font-size: 15px;
-                border-radius: 8px;
-                order: -1;
+                font-size: 14px;
+                border-radius: 7px;
                 flex-shrink: 0;
             }
 
@@ -2048,25 +2061,24 @@
                 flex-direction: row;
                 gap: 0;
                 flex: 1;
-                justify-content: space-around;
+                justify-content: space-evenly;
                 overflow: visible;
+                align-items: center;
             }
 
             /* Show only primary nav icons on mobile, hide the rest */
             .nav-icon {
-                width: 44px;
-                height: 44px;
-                min-width: 44px;
+                width: 36px;
+                height: 36px;
+                min-width: 36px;
                 font-size: 18px;
                 flex-shrink: 0;
             }
             .nav-icon[data-view="playbooks"],
             .nav-icon[data-view="logs"],
             .nav-icon[data-view="tools"],
-            .nav-icon[data-view="docs"],
             .nav-icon[data-view="crm"],
-            .nav-icon[data-view="radar"],
-            .nav-icon[data-view="scratchpad"] {
+            .nav-icon[data-view="radar"] {
                 display: none !important;
             }
             /* Show these in the more menu instead */
@@ -2197,8 +2209,7 @@
 
             /* Chat reopen button: reposition above bottom nav */
             .chat-reopen-btn {
-                bottom: 72px !important;
-                right: 16px !important;
+                display: none !important;
             }
 
             .chat-input-container {
@@ -2216,21 +2227,74 @@
                 grid-row: 1 !important;
                 border-right: none;
                 padding: 12px 16px;
-                max-height: 200px;
+                max-height: 45vh;
                 overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
             }
 
             .agenda-resize-handle {
                 display: none;
             }
 
+            /* Condense agenda header on mobile */
+            .agenda-header {
+                margin-bottom: 6px !important;
+                padding-bottom: 6px !important;
+            }
+            .agenda-header h3 {
+                font-size: 12px !important;
+            }
+            .agenda-stats {
+                font-size: 11px !important;
+                gap: 8px !important;
+                margin-bottom: 4px !important;
+            }
+            .progress-bar {
+                margin-bottom: 8px !important;
+            }
             .agenda-input-row {
-                flex-wrap: wrap;
+                flex-wrap: nowrap;
+                gap: 6px !important;
+                margin-bottom: 6px !important;
             }
             .agenda-input-row input {
                 min-width: 0;
-                flex: 1 1 100%;
+                flex: 1;
+                font-size: 16px !important;
+                padding: 6px 10px !important;
             }
+            /* Hide the priority select on mobile, show icon buttons instead */
+            .agenda-input-row select#taskPriority {
+                display: none !important;
+            }
+            .mobile-priority-cycle {
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                width: 30px;
+                height: auto;
+                align-self: stretch;
+                border-radius: 6px;
+                border: 1.5px solid var(--text-dim);
+                background: transparent;
+                cursor: pointer;
+                font-size: 12px;
+                padding: 0 !important;
+                min-height: 0 !important;
+                flex-shrink: 0;
+                color: var(--text-dim);
+                transition: border-color 0.15s, color 0.15s, transform 0.1s;
+            }
+            .mobile-priority-cycle:active { transform: scale(0.9); }
+            .mobile-priority-cycle[data-p="normal"] { border-color: var(--text-muted); color: var(--text-muted); }
+            .mobile-priority-cycle[data-p="high"] { border-color: #EF4444; color: #EF4444; }
+            .mobile-priority-cycle[data-p="low"] { border-color: var(--text-dim); color: var(--text-dim); }
+            .agenda-input-row .btn-send {
+                padding: 6px 10px !important;
+            }
+            /* Hide workstation indicator and clear done on mobile to save space */
+            #workstationIndicator { display: none !important; }
+            .agenda-header > div:first-child > span:nth-child(2) { display: none !important; }
             .agenda-input-row select {
                 flex: 1;
                 width: auto;
@@ -2298,6 +2362,18 @@
             }
             .idea-archived-grid {
                 grid-template-columns: 1fr !important;
+            }
+            .idea-mobile-move {
+                display: block !important;
+                width: 100%;
+                margin-top: 8px;
+                padding: 6px 10px;
+                font-size: 12px;
+                background: var(--surface);
+                border: var(--border);
+                border-radius: 8px;
+                color: var(--text-muted);
+                cursor: pointer;
             }
 
             /* --- CRM PIPELINE: horizontal scroll --- */
@@ -2434,6 +2510,11 @@
             body {
                 font-size: 15px !important;
             }
+            .hide-mobile { display: none !important; }
+            /* Prevent iOS auto-zoom on focus — minimum 16px */
+            input, textarea, select {
+                font-size: 16px !important;
+            }
             .dynamic-view {
                 font-size: 15px;
                 overflow-x: hidden !important;
@@ -2456,10 +2537,18 @@
             h1 { font-size: 22px !important; }
 
             button, .btn-send, .btn-add, .btn-step, .btn-chat-action,
-            .quick-action, .nav-icon, .cal-nav-btn, .cal-today-btn,
+            .quick-action, .cal-nav-btn, .cal-today-btn,
             .checklist-nav-btn, .checklist-today-btn, .crm-filter-pill,
             .doc-folder-tab, .agent-tab, .crm-view-toggle button {
-                min-height: 44px;
+                min-height: 0;
+                padding: 6px 12px !important;
+                font-size: 13px !important;
+                border-radius: 8px !important;
+            }
+            .cal-nav-btn, .checklist-nav-btn {
+                width: 32px !important;
+                height: 32px !important;
+                padding: 4px !important;
             }
 
             .task-item {
@@ -2592,7 +2681,7 @@
             }
 
             .agenda-container {
-                max-height: 160px;
+                max-height: 40vh;
                 padding: 10px 12px;
             }
 
@@ -2680,7 +2769,7 @@
 
     <div class="icon-rail">
         <div class="logo-container" id="logoToggle">
-            L
+            OS
         </div>
         <div class="nav-icons">
             <div class="nav-icon" id="btnWorkstations" title="Workstations"><i class="fa-solid fa-layer-group"></i></div>
@@ -2693,11 +2782,11 @@
             <div class="nav-icon" data-view="crm" title="CRM"><i class="fa-solid fa-address-book"></i></div>
             <div class="nav-icon" data-view="radar" title="Nightlife Radar"><i class="fa-solid fa-satellite-dish"></i></div>
             <div class="nav-icon" data-view="scratchpad" title="Scratch Pad"><i class="fa-solid fa-terminal"></i></div>
+            <div class="nav-icon" id="btnMobileMore" title="More" style="display:none;"><i class="fa-solid fa-ellipsis"></i></div>
         </div>
         <div class="nav-icon" id="openSearch" title="Search (⌘K)"><i class="fa-solid fa-magnifying-glass"></i></div>
         <div class="nav-icon" id="openSettings" title="Settings" style="margin-top: auto;"><i class="fa-solid fa-gear"></i></div>
         <div class="nav-icon" id="btnLogout" title="Logout" onclick="logout()" style="margin-top: 4px; margin-bottom: 8px;"><i class="fa-solid fa-right-from-bracket"></i></div>
-        <div class="nav-icon" id="btnMobileMore" title="More" style="display:none;"><i class="fa-solid fa-ellipsis"></i></div>
     </div>
 
     <!-- Mobile more menu -->
@@ -2705,10 +2794,9 @@
         <div class="mobile-more-item" onclick="mobileNavTo('playbooks')"><i class="fa-solid fa-book"></i>Playbooks</div>
         <div class="mobile-more-item" onclick="mobileNavTo('logs')"><i class="fa-solid fa-scroll"></i>Work Log</div>
         <div class="mobile-more-item" onclick="mobileNavTo('tools')"><i class="fa-solid fa-toolbox"></i>Tool Stack</div>
-        <div class="mobile-more-item" onclick="mobileNavTo('docs')"><i class="fa-solid fa-file-lines"></i>Documents</div>
         <div class="mobile-more-item" onclick="mobileNavTo('crm')"><i class="fa-solid fa-address-book"></i>CRM</div>
         <div class="mobile-more-item" onclick="mobileNavTo('radar')"><i class="fa-solid fa-satellite-dish"></i>Radar</div>
-        <div class="mobile-more-item" onclick="mobileNavTo('scratchpad')"><i class="fa-solid fa-terminal"></i>Scratch Pad</div>
+        <div class="mobile-more-item" onclick="toggleChatPanel(true);closeMobileMore()"><i class="fa-solid fa-comments"></i>AI Chat</div>
         <div class="mobile-more-item" onclick="openGlobalSearch();closeMobileMore()"><i class="fa-solid fa-magnifying-glass"></i>Search</div>
         <div class="mobile-more-item" onclick="openModal('settingsModal');closeMobileMore()"><i class="fa-solid fa-gear"></i>Settings</div>
         <div class="mobile-more-item" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i>Log Out</div>
@@ -2787,7 +2875,7 @@
                 </div>
                 <div style="display: flex; gap: 6px; align-items: center;">
                     <button class="btn-chat-action" onclick="openRecurringTasksModal()" title="Manage recurring tasks"><i class="fa-solid fa-rotate" style="font-size: 11px;"></i></button>
-                    <button class="btn-chat-action" id="btnClearDone"><i class="fa-solid fa-broom" style="font-size: 11px;"></i> Clear Done</button>
+                    <button class="btn-chat-action" id="btnClearDone" title="Clear Done"><i class="fa-solid fa-broom" style="font-size: 11px;"></i><span class="hide-mobile"> Clear Done</span></button>
                 </div>
             </div>
             <div class="agenda-stats" id="agendaStats"></div>
@@ -2799,6 +2887,9 @@
                     <option value="high">High</option>
                     <option value="low">Low</option>
                 </select>
+                <button class="mobile-priority-cycle" id="mobilePriorityCycle" data-p="normal" onclick="cycleMobilePriority()" title="Priority: Normal">
+                    <i class="fa-solid fa-minus"></i>
+                </button>
                 <button class="btn-send" id="btnAddTask"><i class="fa-solid fa-plus"></i></button>
             </div>
             <div class="task-list" id="taskList"></div>
@@ -3910,6 +4001,25 @@
                 $('authSubmit').disabled = false;
                 $('authSubmit').textContent = authMode === 'login' ? 'Sign In' : 'Create Account';
             }
+        }
+
+        function selectMobilePriority(btn, priority) {
+            document.querySelectorAll('.mobile-priority-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            $('taskPriority').value = priority;
+        }
+
+        function cycleMobilePriority() {
+            const cycle = ['normal', 'high', 'low'];
+            const icons = { normal: 'fa-minus', high: 'fa-angles-up', low: 'fa-angles-down' };
+            const titles = { normal: 'Normal', high: 'High', low: 'Low' };
+            const btn = $('mobilePriorityCycle');
+            const current = btn.getAttribute('data-p');
+            const next = cycle[(cycle.indexOf(current) + 1) % cycle.length];
+            btn.setAttribute('data-p', next);
+            btn.title = 'Priority: ' + titles[next];
+            btn.innerHTML = '<i class="fa-solid ' + icons[next] + '"></i>';
+            $('taskPriority').value = next;
         }
 
         // --- MOBILE NAV ---
@@ -5757,6 +5867,13 @@
             }
         }
 
+        async function moveIdeaToStatus(id, newStatus) {
+            if (!newStatus) return;
+            const idea = state.ideas.find(i => i.id === id);
+            if (!idea || idea.status === newStatus) return;
+            await onIdeaDrop({ preventDefault(){}, stopPropagation(){}, dataTransfer: { getData() { return id; } } }, newStatus);
+        }
+
         const renderIdeaCard = (idea) => {
             const color = idea.color || '#6366F1';
             return `
@@ -5773,6 +5890,10 @@
                         ${idea.category ? `<span class="doc-tag">${idea.category}</span>` : ''}
                         ${idea.company ? `<span class="doc-tag" style="font-size: 11px;">${idea.company}</span>` : ''}
                     </div>
+                    <select class="idea-mobile-move" onclick="event.stopPropagation()" onchange="moveIdeaToStatus('${idea.id}', this.value); this.value='${idea.status}';">
+                        <option value="${idea.status}">Move to...</option>
+                        ${['spark','exploring','actionable','done'].filter(s => s !== idea.status).map(s => `<option value="${s}">${{spark:'Spark',exploring:'Exploring',actionable:'Actionable',done:'Done'}[s]}</option>`).join('')}
+                    </select>
                 </div>
             `;
         };
@@ -8746,6 +8867,11 @@
                 if (e.key === 'Enter') $('authPassword').focus();
             });
         };
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+        }
     </script>
 </body>
 </html>
