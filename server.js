@@ -1178,8 +1178,8 @@ Critical conversion rules:
 5. Do not generalize a specific story into a broad trend blip
 
 Scoring rules:
-- impact_score: 1-10 (1-3 = weak relevance, 4-6 = meaningful, 7-8 = strong, 9-10 = major direct relevance to core pillars)
-- global_impact_score: 1-10 for the entire batch
+- impact_score: 0-100 (0-30 = weak or indirect relevance, 31-60 = meaningful signal, 61-80 = strong strategic relevance, 81-100 = major direct relevance to core pillars)
+- global_impact_score: 0-100 for the entire batch
 
 Status must be one of: watch, important, urgent, opportunity, threat
 
@@ -1197,7 +1197,7 @@ RAW INTEL:\n\n${rawIntel}${sourcesBlock}` }] }],
               type: 'OBJECT',
               properties: {
                 sector: { type: 'STRING', description: 'Primary sector label for this batch' },
-                global_impact_score: { type: 'INTEGER', description: 'Overall batch impact 1-10 for LOKKR strategy' },
+                global_impact_score: { type: 'INTEGER', description: 'Overall batch impact 0-100 for LOKKR strategy' },
                 market_label: { type: 'STRING', description: 'Short phrase summarizing the dominant pattern (e.g. AI dating acceleration, nightlife infrastructure shift, queer platform volatility)' },
                 radar_blips: {
                   type: 'ARRAY',
@@ -1205,7 +1205,7 @@ RAW INTEL:\n\n${rawIntel}${sourcesBlock}` }] }],
                     type: 'OBJECT',
                     properties: {
                       entity: { type: 'STRING', description: 'Primary company, platform, event, or organization' },
-                      impact_score: { type: 'INTEGER', description: '1-10 impact on LOKKR strategy' },
+                      impact_score: { type: 'INTEGER', description: '0-100 impact on LOKKR strategy' },
                       status: { type: 'STRING', description: 'One of: watch, important, urgent, opportunity, threat' },
                       headline: { type: 'STRING', description: 'One-line headline' },
                       strategic_value: { type: 'STRING', description: 'Why this matters for LOKKR — connect to pillars and know-the-room filter. 2-4 sentences.' },
