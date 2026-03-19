@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const { createClient } = require('@supabase/supabase-js');
 const cron = require('node-cron');
 
@@ -14,10 +16,43 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
-// --- Middleware ---
-app.use(cors());
+// --- Security Middleware ---
+// [H4] Restrict CORS to allowed origins
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || `http://localhost:${PORT},https://sexyai-production.up.railway.app`).split(',');
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) cb(null, true);
+    else cb(new Error('CORS blocked'));
+  },
+  credentials: true
+}));
+
+// [M1] Security headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https://api.openai.com", "https://api.anthropic.com", "https://api.x.ai", "https://generativelanguage.googleapis.com"],
+      frameAncestors: ["'none'"],
+    }
+  },
+  crossOriginEmbedderPolicy: false,
+}));
+
+// [H5] Rate limiting
+app.use('/auth/login', rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { error: 'Too many login attempts, try again in 15 minutes' } }));
+app.use('/api/chat/gemini', rateLimit({ windowMs: 60 * 1000, max: 10, message: { error: 'Rate limit exceeded' } }));
+app.use('/api/radar/scan', rateLimit({ windowMs: 60 * 1000, max: 5, message: { error: 'Rate limit exceeded' } }));
+app.use('/api', rateLimit({ windowMs: 60 * 1000, max: 200, message: { error: 'Rate limit exceeded' } }));
+
 app.use(express.json({ limit: '10mb' }));
-app.use(express.static(path.join(__dirname)));
+
+// [M2] Serve only public directory, not project root
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ─────────────────────────────────────────
 // AUTH ENDPOINTS
@@ -146,9 +181,11 @@ app.post('/api/companies', async (req, res) => {
 });
 
 app.patch('/api/companies/:id', async (req, res) => {
+  const { name, color, description, industry, tone, audience, context } = req.body;
+  const updates = Object.fromEntries(Object.entries({ name, color, description, industry, tone, audience, context }).filter(([, v]) => v !== undefined));
   const { data, error } = await supabase
     .from('companies')
-    .update(req.body)
+    .update(updates)
     .eq('id', req.params.id)
     .select()
     .single();
@@ -216,9 +253,11 @@ app.post('/api/tasks', async (req, res) => {
 });
 
 app.patch('/api/tasks/:id', async (req, res) => {
+  const { text, priority, done, date } = req.body;
+  const updates = Object.fromEntries(Object.entries({ text, priority, done, date }).filter(([, v]) => v !== undefined));
   const { data, error } = await supabase
     .from('tasks')
-    .update(req.body)
+    .update(updates)
     .eq('id', req.params.id)
     .select()
     .single();
@@ -259,9 +298,11 @@ app.post('/api/logs', async (req, res) => {
 });
 
 app.patch('/api/logs/:id', async (req, res) => {
+  const { content, agent } = req.body;
+  const updates = Object.fromEntries(Object.entries({ content, agent }).filter(([, v]) => v !== undefined));
   const { data, error } = await supabase
     .from('logs')
-    .update(req.body)
+    .update(updates)
     .eq('id', req.params.id)
     .select()
     .single();
@@ -324,9 +365,11 @@ app.post('/api/tools', async (req, res) => {
 });
 
 app.patch('/api/tools/:id', async (req, res) => {
+  const { name, url, description, category, icon, cost, cost_period } = req.body;
+  const updates = Object.fromEntries(Object.entries({ name, url, description, category, icon, cost, cost_period }).filter(([, v]) => v !== undefined));
   const { data, error } = await supabase
     .from('tools')
-    .update(req.body)
+    .update(updates)
     .eq('id', req.params.id)
     .select()
     .single();
@@ -464,9 +507,11 @@ app.post('/api/events', async (req, res) => {
 });
 
 app.patch('/api/events/:id', async (req, res) => {
+  const { title, date, time, end_time, description, color, company, recurrence, recurrence_end } = req.body;
+  const updates = Object.fromEntries(Object.entries({ title, date, time, end_time, description, color, company, recurrence, recurrence_end }).filter(([, v]) => v !== undefined));
   const { data, error } = await supabase
     .from('calendar_events')
-    .update(req.body)
+    .update(updates)
     .eq('id', req.params.id)
     .select()
     .single();
@@ -508,7 +553,8 @@ app.post('/api/docs', async (req, res) => {
 });
 
 app.patch('/api/docs/:id', async (req, res) => {
-  const updates = { ...req.body, updated_at: new Date().toISOString() };
+  const { title, content, folder, tags, pinned, company } = req.body;
+  const updates = { ...Object.fromEntries(Object.entries({ title, content, folder, tags, pinned, company }).filter(([, v]) => v !== undefined)), updated_at: new Date().toISOString() };
   const { data, error } = await supabase
     .from('documents')
     .update(updates)
@@ -546,9 +592,11 @@ app.post('/api/ideas', async (req, res) => {
 });
 
 app.patch('/api/ideas/:id', async (req, res) => {
+  const { title, body, color, category, status, company, pinned, project, version } = req.body;
+  const updates = Object.fromEntries(Object.entries({ title, body, color, category, status, company, pinned, project, version }).filter(([, v]) => v !== undefined));
   const { data, error } = await supabase
     .from('ideas')
-    .update(req.body)
+    .update(updates)
     .eq('id', req.params.id)
     .select()
     .single();
@@ -583,9 +631,11 @@ app.post('/api/contacts', async (req, res) => {
 });
 
 app.patch('/api/contacts/:id', async (req, res) => {
+  const { name, type, stage, city, instagram, email, phone, venue_type, capacity, notes, last_contact, next_follow_up, company } = req.body;
+  const updates = Object.fromEntries(Object.entries({ name, type, stage, city, instagram, email, phone, venue_type, capacity, notes, last_contact, next_follow_up, company }).filter(([, v]) => v !== undefined));
   const { data, error } = await supabase
     .from('contacts')
-    .update(req.body)
+    .update(updates)
     .eq('id', req.params.id)
     .select()
     .single();
@@ -616,9 +666,11 @@ app.post('/api/recurring-tasks', async (req, res) => {
 });
 
 app.patch('/api/recurring-tasks/:id', async (req, res) => {
+  const { text, priority, company, days } = req.body;
+  const updates = Object.fromEntries(Object.entries({ text, priority, company, days }).filter(([, v]) => v !== undefined));
   const { data, error } = await supabase
     .from('recurring_tasks')
-    .update(req.body)
+    .update(updates)
     .eq('id', req.params.id)
     .select()
     .single();
@@ -820,6 +872,10 @@ app.delete('/api/scratches/:id', async (req, res) => {
 // Reset everything
 // ─────────────────────────────────────────
 app.delete('/api/reset', async (req, res) => {
+  // [C3] Require explicit confirmation body
+  if (req.body?.confirm !== 'DELETE_ALL_DATA') {
+    return res.status(400).json({ error: 'Confirmation required: send { "confirm": "DELETE_ALL_DATA" }' });
+  }
   try {
     await supabase.from('chat_messages').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     await supabase.from('logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
@@ -846,7 +902,7 @@ app.delete('/api/reset', async (req, res) => {
 // Serve frontend
 // ─────────────────────────────────────────
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // ─────────────────────────────────────────
@@ -903,6 +959,6 @@ cron.schedule('0 3 * * *', runScheduledBackup);
 
 app.listen(PORT, () => {
   console.log(`AI Command Center running on http://localhost:${PORT}`);
-  console.log(`   Supabase: ${process.env.SUPABASE_URL || 'SUPABASE_URL not set'}`);
-  console.log(`   Auto-backup: daily at 3:00 AM → Supabase Storage (${BACKUP_BUCKET})`);
+  console.log(`   Supabase: connected`);
+  console.log(`   Auto-backup: daily at 3:00 AM`);
 });

@@ -63,11 +63,15 @@
         }
 
         .logo-container {
-            width: 32px;
-            height: 32px;
-            margin-bottom: 32px;
+            width: 36px;
+            height: 36px;
+            padding: 4px;
+            margin-bottom: 28px;
             cursor: pointer;
             transition: var(--transition);
+            border-radius: 8px;
+            position: relative;
+            z-index: 10;
         }
         .logo-container:hover { transform: scale(1.1); }
         .logo-container img { width: 100%; height: 100%; object-fit: contain; }
@@ -83,16 +87,33 @@
             color: var(--text-dim);
             font-size: 20px;
             cursor: pointer;
-            transition: var(--transition);
+            transition: color 0.2s ease, background 0.2s ease, transform 0.15s ease;
             width: 40px;
             height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
             border-radius: 10px;
+            position: relative;
         }
-        .nav-icon:hover { color: var(--text-primary); background: var(--surface); }
+        .nav-icon:hover { color: var(--text-primary); background: var(--surface); transform: scale(1.08); }
+        .nav-icon:active { transform: scale(0.92); }
         .nav-icon.active { color: var(--accent); background: var(--surface-elevated); }
+        .nav-icon.active::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 20px;
+            background: var(--accent);
+            border-radius: 0 3px 3px 0;
+            animation: staggerSlideRight 200ms ease both;
+        }
+        .nav-icon.nav-ping {
+            animation: navPing 400ms ease;
+        }
 
         /* settings-icon no longer needs margin-top since search icon above has it */
 
@@ -765,9 +786,16 @@
             border: var(--border);
             border-radius: var(--radius);
             padding: 20px;
-            transition: var(--transition);
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
         }
-        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+            border-color: rgba(99, 102, 241, 0.15);
+        }
+        .stat-card:active {
+            transform: translateY(-1px);
+        }
 
         .stat-card .stat-icon {
             width: 40px;
@@ -1385,9 +1413,9 @@
             background: var(--surface-elevated);
         }
         .cal-day {
-            min-height: 100px; padding: 8px; background: var(--surface);
+            height: 110px; padding: 8px; background: var(--surface);
             cursor: pointer; transition: var(--transition); position: relative;
-            display: flex; flex-direction: column;
+            display: flex; flex-direction: column; overflow: hidden;
         }
         .cal-day:hover { background: var(--surface-elevated); }
         .cal-day.other-month { opacity: 0.3; }
@@ -1627,6 +1655,332 @@
             text-align: center; padding: 60px 20px; color: var(--text-secondary);
         }
         .scratch-empty i { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }
+        /* ===== ANIMATION SYSTEM ===== */
+        @keyframes viewFadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes staggerUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes staggerSlideRight {
+            from { opacity: 0; transform: translateX(-10px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes modalOpen {
+            from { opacity: 0; transform: scale(0.95) translateY(-8px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        @keyframes modalBackdropIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+
+        @keyframes toastSlideIn {
+            from { opacity: 0; transform: translateY(16px) scale(0.96); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes toastSlideOut {
+            from { opacity: 1; transform: translateY(0) scale(1); }
+            to   { opacity: 0; transform: translateY(16px) scale(0.96); }
+        }
+
+        @keyframes navPing {
+            0%   { box-shadow: 0 0 0 0 rgba(99,102,241,0.4); }
+            70%  { box-shadow: 0 0 0 8px transparent; }
+            100% { box-shadow: 0 0 0 0 transparent; }
+        }
+
+        @keyframes countPop {
+            0%   { transform: scale(1); }
+            50%  { transform: scale(1.08); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes searchDrop {
+            from { opacity: 0; transform: translateY(-16px) scale(0.97); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes scratchStream {
+            from { opacity: 0; transform: translateX(-6px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes progressGrow {
+            from { width: 0%; }
+        }
+
+        @keyframes popIn {
+            0%   { transform: scale(0); opacity: 0; }
+            70%  { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Stagger animation utilities */
+        .stagger-item {
+            opacity: 0;
+            animation: staggerUp 350ms cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+        .stagger-item:nth-child(1)  { animation-delay: 0ms; }
+        .stagger-item:nth-child(2)  { animation-delay: 40ms; }
+        .stagger-item:nth-child(3)  { animation-delay: 80ms; }
+        .stagger-item:nth-child(4)  { animation-delay: 120ms; }
+        .stagger-item:nth-child(5)  { animation-delay: 160ms; }
+        .stagger-item:nth-child(6)  { animation-delay: 200ms; }
+        .stagger-item:nth-child(7)  { animation-delay: 240ms; }
+        .stagger-item:nth-child(8)  { animation-delay: 280ms; }
+        .stagger-item:nth-child(9)  { animation-delay: 320ms; }
+        .stagger-item:nth-child(10) { animation-delay: 360ms; }
+        .stagger-item:nth-child(n+11) { animation-delay: 400ms; }
+
+        .stagger-col {
+            opacity: 0;
+            animation: staggerSlideRight 400ms cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+        .stagger-col:nth-child(1) { animation-delay: 0ms; }
+        .stagger-col:nth-child(2) { animation-delay: 60ms; }
+        .stagger-col:nth-child(3) { animation-delay: 120ms; }
+        .stagger-col:nth-child(4) { animation-delay: 180ms; }
+        .stagger-col:nth-child(5) { animation-delay: 240ms; }
+
+        .dynamic-view.view-enter {
+            animation: viewFadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+
+        .modal-overlay.modal-visible {
+            display: flex !important;
+            animation: modalBackdropIn 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        .modal-overlay.modal-closing {
+            display: flex !important;
+            animation: modalBackdropIn 200ms cubic-bezier(0.4, 0, 0.2, 1) reverse forwards;
+        }
+        .modal-overlay.modal-visible .modal {
+            animation: modalOpen 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        .modal-overlay.modal-closing .modal {
+            animation: modalOpen 200ms cubic-bezier(0.4, 0, 0.2, 1) reverse both;
+        }
+
+        .toast.show {
+            pointer-events: auto;
+            animation: toastSlideIn 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .toast.toast-exit {
+            animation: toastSlideOut 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        .search-overlay.open .search-container {
+            animation: searchDrop 250ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        .search-overlay.search-closing {
+            animation: modalBackdropIn 150ms cubic-bezier(0.4, 0, 0.2, 1) reverse forwards;
+        }
+        .search-overlay.search-closing .search-container {
+            animation: searchDrop 150ms cubic-bezier(0.4, 0, 0.2, 1) reverse both;
+        }
+
+        .activity-item {
+            transition: background 0.15s ease, transform 0.15s ease;
+        }
+        .activity-item:hover {
+            transform: translateX(2px);
+        }
+
+        .checklist-bar-fill {
+            animation: progressGrow 600ms cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+
+        .scratch-entry.stream-in {
+            animation: scratchStream 250ms cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+
+        .stat-value.count-pop {
+            animation: countPop 300ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* ===== DESIGNER WIZARD ===== */
+        .designer-progress {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            padding: 20px 24px 0;
+        }
+        .designer-progress-step {
+            display: flex;
+            align-items: center;
+            gap: 0;
+        }
+        .designer-progress-dot {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 600;
+            border: 2px solid var(--text-dim);
+            color: var(--text-dim);
+            background: transparent;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            z-index: 1;
+            flex-shrink: 0;
+        }
+        .designer-progress-dot.active {
+            border-color: var(--accent);
+            background: var(--accent);
+            color: white;
+            box-shadow: 0 0 12px rgba(99, 102, 241, 0.35);
+        }
+        .designer-progress-dot.completed {
+            border-color: var(--accent);
+            background: var(--accent);
+            color: white;
+        }
+        .designer-progress-label {
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-top: 6px;
+            text-align: center;
+            transition: color 0.3s ease;
+            white-space: nowrap;
+        }
+        .designer-progress-label.active,
+        .designer-progress-label.completed {
+            color: var(--text-primary);
+        }
+        .designer-progress-node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+        .designer-progress-line {
+            width: 80px;
+            height: 2px;
+            background: var(--text-dim);
+            opacity: 0.3;
+            transition: all 0.35s ease;
+            margin: 0 4px;
+            margin-bottom: 20px;
+        }
+        .designer-progress-line.completed {
+            background: var(--accent);
+            opacity: 1;
+        }
+
+        .designer-wizard-body {
+            position: relative;
+            overflow: hidden;
+            flex: 1;
+            min-height: 0;
+        }
+        .designer-wizard-page {
+            display: none;
+            flex-direction: column;
+            padding: 24px;
+            height: 100%;
+            overflow-y: auto;
+        }
+        .designer-wizard-page.wizard-active {
+            display: flex;
+        }
+
+        @keyframes wizardSlideInRight {
+            from { opacity: 0; transform: translateX(40px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes wizardSlideInLeft {
+            from { opacity: 0; transform: translateX(-40px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+        .designer-wizard-page.slide-in-right {
+            animation: wizardSlideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+        .designer-wizard-page.slide-in-left {
+            animation: wizardSlideInLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+
+        .designer-wizard-footer {
+            padding: 16px 24px;
+            border-top: var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .designer-auto-architect-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 14px 20px;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(139, 92, 246, 0.12));
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            border-radius: 12px;
+            color: var(--accent);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            margin-top: 8px;
+            font-family: inherit;
+        }
+        .designer-auto-architect-btn:hover {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2));
+            border-color: var(--accent);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.2);
+        }
+        .designer-auto-architect-btn i {
+            font-size: 16px;
+        }
+
+        .designer-helper-text {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            line-height: 1.5;
+        }
+
+        .designer-section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .designer-step-card {
+            background: var(--surface-inset);
+            border: var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            position: relative;
+            transition: border-color 0.2s ease;
+        }
+        .designer-step-card:hover {
+            border-color: rgba(99, 102, 241, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -1687,7 +2041,7 @@
             <div class="nav-icon" data-view="tools" title="Tool Stack"><i class="fa-solid fa-toolbox"></i></div>
             <div class="nav-icon" data-view="docs" title="Documents"><i class="fa-solid fa-file-lines"></i></div>
             <div class="nav-icon" data-view="calendar" title="Calendar"><i class="fa-solid fa-calendar-days"></i></div>
-            <div class="nav-icon" data-view="ideas" title="Product Board"><i class="fa-solid fa-lightbulb"></i></div>
+            <div class="nav-icon" data-view="ideas" title="Product Board"><i class="fa-solid fa-rocket"></i></div>
             <div class="nav-icon" data-view="crm" title="CRM"><i class="fa-solid fa-address-book"></i></div>
             <div class="nav-icon" data-view="radar" title="Nightlife Radar"><i class="fa-solid fa-satellite-dish"></i></div>
             <div class="nav-icon" data-view="scratchpad" title="Scratch Pad"><i class="fa-solid fa-terminal"></i></div>
@@ -1848,23 +2202,56 @@
 
     <!-- Playbook Designer Modal -->
     <div class="modal-overlay" id="designerModal">
-        <div class="modal" style="max-width: 95vw; width: 1100px; max-height: 95vh; display: flex; flex-direction: column;">
+        <div class="modal" style="max-width: 95vw; width: 720px; max-height: 92vh; display: flex; flex-direction: column;">
             <div class="modal-header" style="flex-shrink: 0;">
                 <h2 style="font-size: 18px;">Playbook Designer</h2>
-                <button class="btn-chat-action" id="btnAutoArchitect"><i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Architect</button>
+                <button class="btn-chat-action" onclick="closeModal('designerModal')" style="gap: 6px;"><i class="fa-solid fa-times"></i></button>
             </div>
-            <div class="modal-body" style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 24px; flex: 1; overflow-y: auto; min-height: 0;">
-                <div class="designer-left" style="display: flex; flex-direction: column; gap: 0;">
+
+            <!-- Progress Indicator -->
+            <div class="designer-progress">
+                <div class="designer-progress-node">
+                    <div class="designer-progress-dot active" id="designerDot0">1</div>
+                    <div class="designer-progress-label active" id="designerLabel0">Basics</div>
+                </div>
+                <div class="designer-progress-line" id="designerLine0"></div>
+                <div class="designer-progress-node">
+                    <div class="designer-progress-dot" id="designerDot1">2</div>
+                    <div class="designer-progress-label" id="designerLabel1">Instructions</div>
+                </div>
+                <div class="designer-progress-line" id="designerLine1"></div>
+                <div class="designer-progress-node">
+                    <div class="designer-progress-dot" id="designerDot2">3</div>
+                    <div class="designer-progress-label" id="designerLabel2">Steps</div>
+                </div>
+            </div>
+
+            <!-- Wizard Pages -->
+            <div class="designer-wizard-body">
+
+                <!-- Page 1: Basics -->
+                <div class="designer-wizard-page wizard-active" id="designerPage0">
+                    <div class="designer-section-title">Name your playbook</div>
+                    <div class="designer-helper-text">Give it a clear name and assign it to a workstation.</div>
                     <div class="form-group">
-                        <label>Name</label>
-                        <input type="text" id="pbName" placeholder="e.g. Discovery Scan">
+                        <label>Playbook Name</label>
+                        <input type="text" id="pbName" placeholder="e.g. Discovery Scan, Content Pipeline...">
                     </div>
                     <div class="form-group">
                         <label>Workstation</label>
                         <select id="pbCompany"></select>
                     </div>
+                    <button class="designer-auto-architect-btn" id="btnAutoArchitect">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        Let AI design this playbook
+                    </button>
+                </div>
+
+                <!-- Page 2: Instructions + Tools -->
+                <div class="designer-wizard-page" id="designerPage1">
+                    <div class="designer-section-title">Global Instructions</div>
+                    <div class="designer-helper-text">Set the overall context and rules for this playbook. These instructions apply to every step.</div>
                     <div class="form-group" style="flex: 1; display: flex; flex-direction: column;">
-                        <label>Global Instructions</label>
                         <div class="doc-editor-wrap" style="flex: 1; display: flex; flex-direction: column;">
                             <div class="doc-editor-toolbar" id="pbGlobalToolbar">
                                 <button class="doc-tb-btn" data-cmd="bold" onclick="pbExec('pbGlobal','bold')" title="Bold"><i class="fa-solid fa-bold"></i></button>
@@ -1877,29 +2264,42 @@
                                 <button class="doc-tb-btn" onclick="pbExec('pbGlobal','removeFormat')" title="Clear"><i class="fa-solid fa-eraser"></i></button>
                             </div>
                             <div class="doc-editor-content" id="pbGlobal" contenteditable="true"
-                                 style="flex: 1; min-height: 200px;"
+                                 style="flex: 1; min-height: 220px;"
                                  onpaste="docHandlePaste(event)"
                                  onkeydown="docHandleKeydown(event)"></div>
                         </div>
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label>Tools (comma separated)</label>
+                        <label>Tools <span style="font-weight: 400; color: var(--text-dim);">(comma separated)</span></label>
                         <input type="text" id="pbTools" placeholder="Gemini, Grok, etc.">
                     </div>
                 </div>
-                <div class="designer-right" style="display: flex; flex-direction: column;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-shrink: 0;">
-                        <label style="margin-bottom: 0;">Workflow Steps</label>
+
+                <!-- Page 3: Workflow Steps -->
+                <div class="designer-wizard-page" id="designerPage2">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <div class="designer-section-title">Workflow Steps</div>
                         <button class="btn-chat-action" id="btnAddStep">+ Add Step</button>
                     </div>
+                    <div class="designer-helper-text">Define the sequence of steps this playbook will execute. Each step has its own prompt.</div>
                     <div id="designerSteps" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px;">
-                        <!-- Steps go here -->
+                        <!-- Steps rendered here -->
                     </div>
                 </div>
             </div>
-            <div class="modal-footer" style="flex-shrink: 0;">
-                <button class="btn-chat-action" onclick="closeModal('designerModal')">Cancel</button>
-                <button class="btn-send" id="btnSavePlaybook">Save Playbook Project</button>
+
+            <!-- Wizard Footer -->
+            <div class="designer-wizard-footer">
+                <button class="btn-chat-action" id="btnDesignerBack" onclick="setDesignerStep(designerStep - 1)" style="display: none;">
+                    <i class="fa-solid fa-arrow-left" style="margin-right: 4px;"></i> Back
+                </button>
+                <div style="flex: 1;"></div>
+                <button class="btn-send" id="btnDesignerNext" onclick="setDesignerStep(designerStep + 1)">
+                    Next <i class="fa-solid fa-arrow-right" style="margin-left: 4px;"></i>
+                </button>
+                <button class="btn-send" id="btnSavePlaybook" style="display: none;">
+                    <i class="fa-solid fa-check" style="margin-right: 4px;"></i> Save Playbook
+                </button>
             </div>
         </div>
     </div>
@@ -2553,7 +2953,55 @@
                 </div>
             </div>
             <div class="modal-footer">
+                <button class="btn-chat-action" onclick="openRecurringImportModal()" style="margin-right:auto;"><i class="fa-solid fa-file-import" style="margin-right:6px;"></i>Import JSON</button>
+                <button class="btn-chat-action" onclick="exportRecurringTasksJSON()" style="margin-right:4px;"><i class="fa-solid fa-file-export" style="margin-right:6px;"></i>Export</button>
                 <button class="btn-chat-action" onclick="closeModal('recurringTasksModal')">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recurring Tasks Import Modal -->
+    <div class="modal-overlay" id="recurringImportModal">
+        <div class="modal" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 style="font-size: 18px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-file-import" style="font-size: 14px; color: var(--accent);"></i>Import Recurring Tasks
+                </h2>
+                <i class="fa-solid fa-times" style="cursor: pointer;" onclick="closeModal('recurringImportModal')"></i>
+            </div>
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 16px;">
+                <div style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">
+                    Paste a JSON array below. Each object needs <code style="background:rgba(99,102,241,0.15);padding:2px 6px;border-radius:4px;font-size:12px;">text</code>, <code style="background:rgba(99,102,241,0.15);padding:2px 6px;border-radius:4px;font-size:12px;">company</code>, <code style="background:rgba(99,102,241,0.15);padding:2px 6px;border-radius:4px;font-size:12px;">priority</code>, and <code style="background:rgba(99,102,241,0.15);padding:2px 6px;border-radius:4px;font-size:12px;">days</code>. Days are numbers: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat.
+                </div>
+                <div style="background: var(--surface-inset); border: var(--border); border-radius: 8px; padding: 12px; font-family: 'SF Mono','Fira Code',monospace; font-size: 12px; line-height: 1.6; color: var(--text-muted); white-space: pre; overflow-x: auto;">[
+  {
+    "text": "Review analytics",
+    "company": "LOKKR",
+    "priority": "high",
+    "days": [1, 2, 3, 4, 5]
+  },
+  {
+    "text": "Post to socials",
+    "company": "LOKKR",
+    "priority": "normal",
+    "days": [1, 3, 5]
+  }
+]</div>
+                <div>
+                    <label style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px;">JSON Input</label>
+                    <textarea id="recurringImportJSON" rows="10" style="width:100%;background:var(--surface-inset);border:var(--border);border-radius:8px;padding:12px;color:var(--text-primary);font-family:'SF Mono','Fira Code',monospace;font-size:13px;line-height:1.5;resize:vertical;" placeholder='Paste JSON array here...'></textarea>
+                </div>
+                <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface-inset);border:var(--border);border-radius:8px;cursor:pointer;transition:var(--transition);" onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor=''">
+                    <input type="checkbox" id="recurringImportReplace" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;">
+                    <div>
+                        <div style="font-size:13px;font-weight:600;color:var(--text-primary);">Replace all existing tasks</div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Deletes current tasks before importing. Leave unchecked to merge.</div>
+                    </div>
+                </label>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-chat-action" onclick="closeModal('recurringImportModal')">Cancel</button>
+                <button class="btn-send" onclick="importRecurringTasksJSON()"><i class="fa-solid fa-file-import" style="margin-right:6px;"></i>Import</button>
             </div>
         </div>
     </div>
@@ -2773,6 +3221,17 @@
                 if (data.error) throw new Error(data.error);
                 localStorage.setItem('cc_auth_token', data.token);
                 localStorage.setItem('cc_refresh_token', data.refresh_token);
+                // Show loader before hiding auth to prevent flash
+                let loader = $('appLoader');
+                if (!loader) {
+                    loader = document.createElement('div');
+                    loader.id = 'appLoader';
+                    loader.className = 'app-loader';
+                    loader.innerHTML = '<div class="app-loader-spinner"></div><div class="app-loader-text">Loading workspace...</div>';
+                    document.body.appendChild(loader);
+                }
+                loader.classList.remove('fade-out');
+                loader.style.display = '';
                 $('authScreen').style.display = 'none';
                 await loadFromServer();
                 bootApp();
@@ -2804,12 +3263,33 @@
         const showToast = (msg) => {
             const t = $('toast');
             t.innerText = msg;
+            t.classList.remove('toast-exit');
             t.classList.add('show');
-            setTimeout(() => t.classList.remove('show'), 3000);
+            clearTimeout(t._hideTimer);
+            t._hideTimer = setTimeout(() => {
+                t.classList.remove('show');
+                t.classList.add('toast-exit');
+                setTimeout(() => t.classList.remove('toast-exit'), 250);
+            }, 3000);
         };
 
-        const openModal = (id) => $(id).style.display = 'flex';
-        const closeModal = (id) => $(id).style.display = 'none';
+        const openModal = (id) => {
+            const el = $(id);
+            el.classList.remove('modal-closing');
+            el.style.display = 'flex';
+            el.offsetHeight; // force reflow
+            el.classList.add('modal-visible');
+        };
+
+        const closeModal = (id) => {
+            const el = $(id);
+            el.classList.add('modal-closing');
+            el.classList.remove('modal-visible');
+            setTimeout(() => {
+                el.style.display = 'none';
+                el.classList.remove('modal-closing');
+            }, 200);
+        };
 
         // Map DB row → state shape
         const pbFromRow = (row) => ({
@@ -3088,7 +3568,7 @@
                 items.forEach(rt => {
                     const wsColor = state.companies.find(c => c.name === rt.company)?.color || 'var(--accent)';
                     taskRows += `
-                    <div class="checklist-item p-${rt.priority} ${rt.isDone ? 'item-done' : ''}">
+                    <div class="checklist-item stagger-item p-${rt.priority} ${rt.isDone ? 'item-done' : ''}">
                         <input type="checkbox" class="cl-check" ${rt.isDone ? 'checked' : ''} onchange="plannerToggleRecurring('${rt.id}','${dateStr}')" onclick="event.stopPropagation()">
                         <div class="checklist-item-body">
                             <div class="checklist-item-text">${rt.text}</div>
@@ -3174,7 +3654,7 @@
                                 if (todayEvents.length === 0) return '<div style="color: var(--text-dim); font-size: 14px; padding: 8px 0;">Nothing scheduled today.</div>';
                                 return todayEvents.map(e => {
                                     const timeStr = e.time ? e.time.substring(0,5) : 'All day';
-                                    return `<div class="activity-item" style="cursor:pointer;" onclick="state.view='calendar'; document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=calendar]')?.classList.add('active'); openEventEditor('${e.id}');">
+                                    return `<div class="activity-item stagger-item" style="cursor:pointer;" onclick="state.view='calendar'; document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=calendar]')?.classList.add('active'); openEventEditor('${e.id}');">
                                         <div style="min-width: 44px; font-size: 13px; color: ${e.color || '#6366F1'}; font-weight: 600;">${timeStr}</div>
                                         <div style="flex: 1; min-width: 0;">
                                             <div style="font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${e.title}</div>
@@ -3197,7 +3677,7 @@
                                 overdue.forEach(c => {
                                     const days = Math.floor((today - new Date(c.next_follow_up)) / (1000*60*60*24));
                                     const daysLabel = days === 1 ? '1 day overdue' : days < 7 ? days + ' days overdue' : Math.floor(days/7) + ' week' + (Math.floor(days/7)>1?'s':'') + ' overdue';
-                                    fhtml += `<div class="activity-item" style="cursor:pointer; border-left: 3px solid #EF4444; padding-left: 12px; border-radius: 4px;" onclick="state.view='crm'; document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=crm]')?.classList.add('active'); document.querySelector('.agenda-container').style.display='none'; $('agendaResizeHandle').style.display='none'; $('mainContent').style.gridTemplateRows='0px auto 1fr'; renderCRM(); openCrmEditor('${c.id}');">
+                                    fhtml += `<div class="activity-item stagger-item" style="cursor:pointer; border-left: 3px solid #EF4444; padding-left: 12px; border-radius: 4px;" onclick="state.view='crm'; document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=crm]')?.classList.add('active'); document.querySelector('.agenda-container').style.display='none'; $('agendaResizeHandle').style.display='none'; $('mainContent').style.gridTemplateRows='0px auto 1fr'; renderCRM(); openCrmEditor('${c.id}');">
                                         <div style="flex: 1; min-width: 0;">
                                             <div style="font-size: 14px; font-weight: 500;"><span style="color: #EF4444; margin-right: 4px;">&#9888;</span> Follow up: ${c.name}${c.city ? ' (' + c.city + ')' : ''}</div>
                                             <div style="font-size: 12px; color: #EF4444;">${daysLabel}</div>
@@ -3205,7 +3685,7 @@
                                     </div>`;
                                 });
                                 upcoming.forEach(c => {
-                                    fhtml += `<div class="activity-item" style="cursor:pointer; border-left: 3px solid #06B6D4; padding-left: 12px; border-radius: 4px;" onclick="state.view='crm'; document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=crm]')?.classList.add('active'); document.querySelector('.agenda-container').style.display='none'; $('agendaResizeHandle').style.display='none'; $('mainContent').style.gridTemplateRows='0px auto 1fr'; renderCRM(); openCrmEditor('${c.id}');">
+                                    fhtml += `<div class="activity-item stagger-item" style="cursor:pointer; border-left: 3px solid #06B6D4; padding-left: 12px; border-radius: 4px;" onclick="state.view='crm'; document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=crm]')?.classList.add('active'); document.querySelector('.agenda-container').style.display='none'; $('agendaResizeHandle').style.display='none'; $('mainContent').style.gridTemplateRows='0px auto 1fr'; renderCRM(); openCrmEditor('${c.id}');">
                                         <div style="flex: 1; min-width: 0;">
                                             <div style="font-size: 14px; font-weight: 500;"><i class="fa-solid fa-clock" style="color: #06B6D4; margin-right: 4px;"></i> ${c.name}${c.city ? ' (' + c.city + ')' : ''}</div>
                                             <div style="font-size: 12px; color: var(--text-dim);">Follow up: ${new Date(c.next_follow_up).toLocaleDateString()}</div>
@@ -3217,18 +3697,34 @@
                         </div>
 
                         <div class="dash-section">
-                            <div class="dash-section-title"><i class="fa-solid fa-lightbulb" style="color: #F59E0B;"></i> Recent Sparks</div>
+                            <div class="dash-section-title"><i class="fa-solid fa-rocket" style="color: #10B981;"></i> Product Board</div>
                             ${(() => {
-                                const sparks = state.ideas.filter(i => i.status === 'spark').slice(0, 5);
-                                if (sparks.length === 0) return '<div style="color: var(--text-dim); font-size: 14px; padding: 8px 0;">No sparks yet. Capture an idea.</div>';
-                                return sparks.map(i => {
-                                    const color = i.color || '#F59E0B';
-                                    return `<div class="activity-item" style="cursor:pointer; border-left: 3px solid ${color}; padding-left: 12px; border-radius: 4px;" onclick="state.view='ideas'; document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=ideas]')?.classList.add('active'); document.querySelector('.agenda-container').style.display='none'; $('agendaResizeHandle').style.display='none'; $('mainContent').style.gridTemplateRows='0px auto 1fr'; renderIdeas(); openIdeaEditor('${i.id}');">
-                                        <div style="flex: 1; min-width: 0;">
-                                            <div style="font-size: 14px; font-weight: 500;">${i.title}</div>
-                                            ${i.category ? `<div style="font-size: 12px; color: var(--text-dim);">${i.category}</div>` : ''}
-                                        </div>
-                                    </div>`;
+                                const actionable = state.ideas.filter(i => i.status === 'actionable');
+                                if (actionable.length === 0) return '<div style="color: var(--text-dim); font-size: 14px; padding: 8px 0;">No actionable items. Move ideas to Actionable.</div>';
+                                // Group by project
+                                const byProject = {};
+                                actionable.forEach(i => {
+                                    const proj = i.project || 'No Project';
+                                    if (!byProject[proj]) byProject[proj] = [];
+                                    byProject[proj].push(i);
+                                });
+                                return Object.entries(byProject).map(([proj, items]) => {
+                                    const projectLabel = proj !== 'No Project' ? `<div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); margin: 8px 0 4px; padding-left: 2px;">${proj}</div>` : '';
+                                    const itemsHtml = items.slice(0, 5).map(i => {
+                                        const color = i.color || '#10B981';
+                                        const ws = i.company ? state.companies.find(c => c.name === i.company) : null;
+                                        const wsColor = ws ? ws.color : 'var(--text-dim)';
+                                        return `<div class="activity-item stagger-item" style="cursor:pointer; border-left: 3px solid ${color}; padding-left: 12px; border-radius: 4px;" onclick="state.view='ideas'; document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=ideas]')?.classList.add('active'); document.querySelector('.agenda-container').style.display='none'; $('agendaResizeHandle').style.display='none'; $('mainContent').style.gridTemplateRows='0px auto 1fr'; renderIdeas(); openIdeaEditor('${i.id}');">
+                                            <div style="flex: 1; min-width: 0;">
+                                                <div style="font-size: 14px; font-weight: 500;">${i.title}</div>
+                                                <div style="font-size: 12px; color: var(--text-dim); display: flex; gap: 8px; align-items: center;">
+                                                    ${i.company ? `<span style="color:${wsColor};font-weight:600;">${i.company}</span>` : ''}
+                                                    ${i.category ? `<span>${i.category}</span>` : ''}
+                                                </div>
+                                            </div>
+                                        </div>`;
+                                    }).join('');
+                                    return projectLabel + itemsHtml;
                                 }).join('');
                             })()}
                         </div>
@@ -3237,7 +3733,25 @@
             `;
 
             view.innerHTML = html;
+            animateCounters();
         };
+
+        function animateCounters() {
+            document.querySelectorAll('.stat-value[data-count]').forEach(el => {
+                const target = parseInt(el.dataset.count);
+                if (isNaN(target)) return;
+                const duration = 400;
+                const start = performance.now();
+                const step = (now) => {
+                    const progress = Math.min((now - start) / duration, 1);
+                    const eased = 1 - Math.pow(1 - progress, 3);
+                    el.textContent = Math.round(target * eased);
+                    if (progress < 1) requestAnimationFrame(step);
+                };
+                requestAnimationFrame(step);
+                el.classList.add('count-pop');
+            });
+        }
 
         const renderPlaybooks = () => {
             if (state.view !== 'playbooks') return;
@@ -3259,7 +3773,7 @@
 
             filtered.forEach(pb => {
                 html += `
-                    <div class="playbook-card" style="cursor: pointer;" onclick="openPbViewer('${pb.id}')">
+                    <div class="playbook-card stagger-item" style="cursor: pointer;" onclick="openPbViewer('${pb.id}')">
                         <div style="position: absolute; top: 16px; right: 16px; display: flex; gap: 6px;">
                             <i class="fa-solid fa-list-check" style="color: var(--text-dim); cursor: pointer; padding: 4px;" onclick="event.stopPropagation(); sendPlaybookToAgenda('${pb.id}')" title="Send all steps to Agenda"></i>
                             <i class="fa-solid fa-pen" style="color: var(--text-dim); cursor: pointer; padding: 4px;" onclick="event.stopPropagation(); openDesigner('${pb.id}')" title="Edit"></i>
@@ -3538,6 +4052,15 @@
                 html += `<div style="text-align: center; color: var(--text-dim); padding: 40px;">No tools yet. Add one to get started.</div>`;
             }
 
+            // Build tool→playbook map (case-insensitive match)
+            const toolPlaybookMap = {};
+            state.tools.forEach(tool => {
+                const name = (tool.name || '').toLowerCase().trim();
+                toolPlaybookMap[tool.id] = state.playbooks.filter(pb =>
+                    (pb.tools || []).some(t => t.toLowerCase().trim() === name)
+                );
+            });
+
             catKeys.forEach(cat => {
                 html += `
                     <div style="margin-bottom: 24px;">
@@ -3555,7 +4078,7 @@
                     const costLabel = tool.cost ? `$${Number(tool.cost).toFixed(2)}${periodLabels[tool.cost_period] || '/mo'}` : 'Free';
                     const costColor = tool.cost ? 'var(--text-primary)' : 'var(--text-dim)';
                     html += `
-                        <div class="playbook-card" style="margin-bottom: 0; padding: 16px; cursor: pointer;" onclick="openToolEditor('${tool.id}')">
+                        <div class="playbook-card stagger-item" style="margin-bottom: 0; padding: 16px; cursor: pointer;" onclick="openToolEditor('${tool.id}')">
                             <div style="display: flex; align-items: flex-start; gap: 12px;">
                                 <div style="width: 36px; height: 36px; background: var(--surface-elevated); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                     <i class="${iconPrefix} ${iconClass}" style="color: var(--accent); font-size: 16px;"></i>
@@ -3565,6 +4088,15 @@
                                     <div style="font-size: 12px; color: var(--accent); margin-bottom: 4px;">${hostname}</div>
                                     <div style="font-size: 12px; color: ${costColor}; margin-bottom: 4px; font-weight: 500;">${costLabel}</div>
                                     ${desc ? `<div style="font-size: 13px; color: var(--text-muted); line-height: 1.4;">${desc}</div>` : ''}
+                                    ${(() => {
+                                        const pbs = toolPlaybookMap[tool.id] || [];
+                                        if (!pbs.length) return '';
+                                        return `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">${pbs.map(pb => {
+                                            const ws = state.companies.find(c => c.name === pb.company);
+                                            const color = ws ? ws.color : 'var(--accent)';
+                                            return `<span style="font-size:11px;padding:2px 8px;border-radius:6px;background:${color}18;color:${color};font-weight:600;cursor:pointer;" onclick="event.stopPropagation();openDesigner('${pb.id}')" title="Open playbook">${pb.name}</span>`;
+                                        }).join('')}</div>`;
+                                    })()}
                                 </div>
                                 <a href="${tool.url}" target="_blank" onclick="event.stopPropagation();" style="color: var(--text-dim); font-size: 14px; padding: 4px;" title="Open link">
                                     <i class="fa-solid fa-arrow-up-right-from-square"></i>
@@ -4214,13 +4746,14 @@
                     dayEvents.forEach(e => {
                         const timeStr = e.time ? (e.end_time ? `${e.time.substring(0,5)} — ${e.end_time.substring(0,5)}` : e.time.substring(0,5)) : 'All day';
                         html += `
-                            <div class="cal-event-item" onclick="openEventEditor('${e._sourceId || e.id}')">
+                            <div class="cal-event-item" onclick="openEventEditor('${e._sourceId || e.id}')" onmouseenter="this.querySelector('.cal-ev-del').style.opacity='1'" onmouseleave="this.querySelector('.cal-ev-del').style.opacity='0'">
                                 <div class="cal-event-dot" style="background:${e.color || '#6366F1'};"></div>
                                 <div class="cal-event-info">
                                     <div class="cal-event-title">${e.title}</div>
                                     <div class="cal-event-time"><i class="fa-solid fa-clock" style="margin-right:4px;"></i>${timeStr}${e.company ? ` · ${e.company}` : ''}</div>
                                     ${e.description ? `<div class="cal-event-desc">${e.description}</div>` : ''}
                                 </div>
+                                <button class="cal-ev-del" onclick="event.stopPropagation();deleteEventById('${e._sourceId || e.id}')" title="Delete" style="opacity:0;background:none;border:none;color:var(--text-muted);cursor:pointer;padding:4px 8px;font-size:14px;border-radius:4px;transition:opacity 0.15s,color 0.15s;flex-shrink:0;" onmouseenter="this.style.color='#ef4444'" onmouseleave="this.style.color='var(--text-muted)'">&times;</button>
                             </div>
                         `;
                     });
@@ -4263,13 +4796,14 @@
                     html += `
                         <div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--surface); border: var(--border); border-radius: 10px; margin-bottom: 6px; cursor: pointer; transition: var(--transition); border-left: 3px solid ${e.color || '#6366F1'};"
                              onclick="openEventEditor('${e._sourceId || e.id}')"
-                             onmouseenter="this.style.background='var(--surface-elevated)'" onmouseleave="this.style.background='var(--surface)'">
+                             onmouseenter="this.style.background='var(--surface-elevated)';var b=this.querySelector('button');if(b)b.style.opacity='1'" onmouseleave="this.style.background='var(--surface)';var b=this.querySelector('button');if(b)b.style.opacity='0'">
                             <div style="min-width: 52px; font-size: 13px; color: ${e.color || '#6366F1'}; font-weight: 600;">${timeStr}</div>
                             <div style="flex: 1; min-width: 0;">
                                 <div style="font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${e.recurrence ? '<i class="fa-solid fa-repeat" style="font-size:11px;color:var(--text-dim);margin-right:4px;"></i>' : ''}${e.title}</div>
                                 ${e.description ? `<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${e.description}</div>` : ''}
                             </div>
                             ${e.company ? `<span class="badge" style="font-size: 12px; flex-shrink: 0;">${e.company}</span>` : ''}
+                            <button onclick="event.stopPropagation();deleteEventById('${e._sourceId || e.id}')" title="Delete" style="opacity:0;background:none;border:none;color:var(--text-muted);cursor:pointer;padding:4px 8px;font-size:13px;border-radius:4px;transition:opacity 0.15s,color 0.15s;" onmouseenter="this.style.color='#ef4444';this.style.background='rgba(239,68,68,0.1)'" onmouseleave="this.style.color='var(--text-muted)';this.style.background='none'">&times;</button>
                         </div>
                     `;
                 });
@@ -4302,11 +4836,13 @@
         };
 
         const loadCalendarEvents = async () => {
+            // Render immediately with existing data to avoid flash
+            renderCalendar();
             try {
                 const events = await api.get(`/api/events?month=${state.calMonth+1}&year=${state.calYear}`);
                 state.calEvents = events;
+                renderCalendar();
             } catch (e) {}
-            renderCalendar();
         };
 
         const openEventEditor = (eventId, prefillDate) => {
@@ -4399,19 +4935,51 @@
             }
         };
 
-        const deleteCurrentEvent = async () => {
-            if (!state.editingEvent || !confirm('Delete this event?')) return;
+        async function deleteCurrentEvent() {
+            if (!state.editingEvent) return;
+            if (!state._eventDeleteArmed || state._eventDeleteArmedId !== state.editingEvent.id) {
+                state._eventDeleteArmed = true;
+                state._eventDeleteArmedId = state.editingEvent.id;
+                showToast('Click delete again to confirm');
+                setTimeout(() => { state._eventDeleteArmed = false; state._eventDeleteArmedId = null; }, 3000);
+                return;
+            }
+            state._eventDeleteArmed = false;
+            state._eventDeleteArmedId = null;
             try {
                 await api.del(`/api/events/${state.editingEvent.id}`);
                 state.events = state.events.filter(e => e.id !== state.editingEvent.id);
                 if (state.calEvents) state.calEvents = state.calEvents.filter(e => e.id !== state.editingEvent.id);
                 closeModal('eventEditorModal');
                 renderCalendar();
+                renderAgenda();
                 showToast('Event deleted');
             } catch (err) {
                 showToast('Failed to delete: ' + err.message);
             }
-        };
+        }
+
+        async function deleteEventById(id) {
+            if (!state._eventDeleteArmed || state._eventDeleteArmedId !== id) {
+                state._eventDeleteArmed = true;
+                state._eventDeleteArmedId = id;
+                showToast('Click delete again to confirm');
+                setTimeout(() => { state._eventDeleteArmed = false; state._eventDeleteArmedId = null; }, 3000);
+                return;
+            }
+            state._eventDeleteArmed = false;
+            state._eventDeleteArmedId = null;
+            try {
+                await api.del(`/api/events/${id}`);
+                state.events = state.events.filter(e => e.id !== id);
+                if (state.calEvents) state.calEvents = state.calEvents.filter(e => e.id !== id);
+                renderCalendar();
+                renderAgenda();
+                showToast('Event deleted');
+            } catch (err) {
+                showToast('Failed to delete: ' + err.message);
+            }
+        }
 
         // --- IDEAS ---
         const ideaExec = (cmd, val) => {
@@ -4581,7 +5149,7 @@
 
                 <div class="idea-pipeline">
                     ${columns.map(col => `
-                        <div class="idea-column" data-status="${col.key}"
+                        <div class="idea-column stagger-col" data-status="${col.key}"
                             ondragover="event.preventDefault(); this.style.outline='2px solid var(--accent)';"
                             ondragleave="this.style.outline='';"
                             ondrop="onIdeaDrop(event, '${col.key}'); this.style.outline='';">
@@ -5034,7 +5602,7 @@
                         ${CRM_STAGES.map(stage => {
                             const items = all.filter(c => c.stage === stage.key);
                             return `
-                                <div class="crm-column">
+                                <div class="crm-column stagger-col">
                                     <div class="crm-column-header">
                                         <div class="crm-column-title">
                                             <i class="fa-solid ${stage.icon}" style="color: ${stage.color};"></i>
@@ -5619,13 +6187,99 @@
             if (state.view === 'dashboard') renderDashboard();
         };
 
-        const deletePlaybook = async (id) => {
-            if (confirm('Delete this playbook?')) {
-                await api.del(`/api/playbooks/${id}`);
-                state.playbooks = state.playbooks.filter(p => p.id !== id);
-                renderPlaybooks();
-                renderSidebar();
+        function openRecurringImportModal() {
+            $('recurringImportJSON').value = '';
+            $('recurringImportReplace').checked = false;
+            openModal('recurringImportModal');
+        }
+
+        function exportRecurringTasksJSON() {
+            const exported = state.recurringTasks.map(rt => ({
+                text: rt.text,
+                company: rt.company,
+                priority: rt.priority,
+                days: rt.days
+            }));
+            const json = JSON.stringify(exported, null, 2);
+            navigator.clipboard.writeText(json).then(() => {
+                showToast(`Copied ${exported.length} tasks to clipboard`);
+            });
+        }
+
+        async function importRecurringTasksJSON() {
+            const raw = $('recurringImportJSON').value.trim();
+            if (!raw) { showToast('Paste JSON first'); return; }
+            let tasks;
+            try {
+                tasks = JSON.parse(raw);
+            } catch (e) {
+                showToast('Invalid JSON: ' + e.message);
+                return;
             }
+            if (!Array.isArray(tasks)) { showToast('JSON must be an array'); return; }
+
+            // Validate
+            const validPriorities = ['high', 'normal', 'low'];
+            for (let i = 0; i < tasks.length; i++) {
+                const t = tasks[i];
+                if (!t.text || typeof t.text !== 'string') { showToast(`Item ${i + 1}: "text" is required`); return; }
+                if (!t.company || typeof t.company !== 'string') { showToast(`Item ${i + 1}: "company" is required`); return; }
+                if (!t.priority || !validPriorities.includes(t.priority)) { showToast(`Item ${i + 1}: "priority" must be high, normal, or low`); return; }
+                if (!Array.isArray(t.days) || !t.days.length) { showToast(`Item ${i + 1}: "days" must be a non-empty array of numbers 0-6`); return; }
+                if (t.days.some(d => typeof d !== 'number' || d < 0 || d > 6)) { showToast(`Item ${i + 1}: "days" values must be 0-6`); return; }
+            }
+
+            const replace = $('recurringImportReplace').checked;
+
+            try {
+                // Delete existing if replace mode
+                if (replace) {
+                    for (const rt of state.recurringTasks) {
+                        await api.del(`/api/recurring-tasks/${rt.id}`);
+                    }
+                    state.recurringTasks = [];
+                    state.recurringCompletions = [];
+                }
+
+                // Create new tasks
+                let added = 0;
+                for (const t of tasks) {
+                    const rt = await api.post('/api/recurring-tasks', {
+                        text: t.text,
+                        company: t.company,
+                        priority: t.priority,
+                        days: t.days
+                    });
+                    state.recurringTasks.push(rt);
+                    added++;
+                }
+
+                closeModal('recurringImportModal');
+                renderRecurringTasksList();
+                renderAgenda();
+                renderSidebar();
+                if (state.view === 'dashboard') renderDashboard();
+                showToast(`Imported ${added} recurring task${added !== 1 ? 's' : ''}`);
+            } catch (err) {
+                showToast('Import failed: ' + err.message);
+            }
+        }
+
+        const deletePlaybook = async (id) => {
+            if (!state._pbDeleteArmed || state._pbDeleteArmedId !== id) {
+                state._pbDeleteArmed = true;
+                state._pbDeleteArmedId = id;
+                showToast('Click delete again to confirm');
+                setTimeout(() => { state._pbDeleteArmed = false; state._pbDeleteArmedId = null; }, 3000);
+                return;
+            }
+            state._pbDeleteArmed = false;
+            state._pbDeleteArmedId = null;
+            await api.del(`/api/playbooks/${id}`);
+            state.playbooks = state.playbooks.filter(p => p.id !== id);
+            renderPlaybooks();
+            renderSidebar();
+            showToast('Playbook deleted');
         };
 
         const logResponse = async (content, agent) => {
@@ -5691,12 +6345,69 @@
             };
             try {
                 if (editingWorkstation) {
+                    const oldName = editingWorkstation.name;
                     const updated = await api.patch(`/api/companies/${editingWorkstation.id}`, payload);
                     const idx = state.companies.findIndex(c => c.id === editingWorkstation.id);
                     if (idx !== -1) state.companies[idx] = { ...state.companies[idx], ...updated };
                     // Update selectedCompany name if it changed
-                    if (state.selectedCompany === editingWorkstation.name && editingWorkstation.name !== name) {
+                    if (state.selectedCompany === oldName && oldName !== name) {
                         state.selectedCompany = name;
+                    }
+                    // Propagate name change to all related records
+                    if (oldName !== name) {
+                        const dbUpdates = [];
+                        state.recurringTasks = state.recurringTasks.map(rt => {
+                            if (rt.company === oldName) {
+                                dbUpdates.push(api.patch(`/api/recurring-tasks/${rt.id}`, { company: name }));
+                                return { ...rt, company: name };
+                            }
+                            return rt;
+                        });
+                        // tasks don't have a company column, skip DB update
+                        state.ideas = state.ideas.map(i => {
+                            if (i.company === oldName) {
+                                dbUpdates.push(api.patch(`/api/ideas/${i.id}`, { company: name }));
+                                return { ...i, company: name };
+                            }
+                            return i;
+                        });
+                        state.docs = state.docs.map(d => {
+                            if (d.company === oldName) {
+                                dbUpdates.push(api.patch(`/api/docs/${d.id}`, { company: name }));
+                                return { ...d, company: name };
+                            }
+                            return d;
+                        });
+                        state.contacts = state.contacts.map(c => {
+                            if (c.company === oldName) {
+                                dbUpdates.push(api.patch(`/api/contacts/${c.id}`, { company: name }));
+                                return { ...c, company: name };
+                            }
+                            return c;
+                        });
+                        state.playbooks = state.playbooks.map(p => {
+                            if (p.company === oldName) {
+                                dbUpdates.push(api.post('/api/playbooks', { ...p, company: name }));
+                                return { ...p, company: name };
+                            }
+                            return p;
+                        });
+                        state.events = state.events.map(e => {
+                            if (e.company === oldName) {
+                                dbUpdates.push(api.patch(`/api/events/${e.id}`, { company: name }));
+                                return { ...e, company: name };
+                            }
+                            return e;
+                        });
+                        (state.calEvents || []).forEach((e, i) => {
+                            if (e.company === oldName) {
+                                state.calEvents[i] = { ...e, company: name };
+                            }
+                        });
+                        // Wait for all DB updates to complete
+                        const results = await Promise.allSettled(dbUpdates);
+                        const failed = results.filter(r => r.status === 'rejected');
+                        if (failed.length) console.warn(`[Rename] ${failed.length} DB updates failed`, failed);
                     }
                 } else {
                     const created = await api.post('/api/companies', payload);
@@ -5705,6 +6416,7 @@
                 closeModal('wsEditorModal');
                 renderSidebar();
                 renderDashboard();
+                renderAgenda();
                 showToast(editingWorkstation ? 'Workstation updated' : 'Workstation created');
             } catch (err) {
                 showToast('Failed to save: ' + err.message);
@@ -6138,6 +6850,60 @@
 
         // --- DESIGNER LOGIC ---
         let currentDesignerSteps = [];
+        let designerStep = 0;
+
+        const setDesignerStep = (n) => {
+            const totalPages = 3;
+            if (n < 0 || n >= totalPages) return;
+            const direction = n > designerStep ? 'right' : 'left';
+            const prevPage = $('designerPage' + designerStep);
+            designerStep = n;
+            const nextPage = $('designerPage' + designerStep);
+
+            // Hide all pages
+            for (let i = 0; i < totalPages; i++) {
+                const p = $('designerPage' + i);
+                p.classList.remove('wizard-active', 'slide-in-right', 'slide-in-left');
+            }
+
+            // Show target page with animation
+            nextPage.classList.add('wizard-active');
+            nextPage.classList.add(direction === 'right' ? 'slide-in-right' : 'slide-in-left');
+
+            // Update progress dots
+            for (let i = 0; i < totalPages; i++) {
+                const dot = $('designerDot' + i);
+                const label = $('designerLabel' + i);
+                dot.classList.remove('active', 'completed');
+                label.classList.remove('active', 'completed');
+                if (i < designerStep) {
+                    dot.classList.add('completed');
+                    dot.innerHTML = '<i class="fa-solid fa-check" style="font-size: 12px;"></i>';
+                    label.classList.add('completed');
+                } else if (i === designerStep) {
+                    dot.classList.add('active');
+                    dot.textContent = i + 1;
+                    label.classList.add('active');
+                } else {
+                    dot.textContent = i + 1;
+                }
+            }
+
+            // Update progress lines
+            for (let i = 0; i < totalPages - 1; i++) {
+                const line = $('designerLine' + i);
+                if (i < designerStep) {
+                    line.classList.add('completed');
+                } else {
+                    line.classList.remove('completed');
+                }
+            }
+
+            // Update footer buttons
+            $('btnDesignerBack').style.display = designerStep === 0 ? 'none' : '';
+            $('btnDesignerNext').style.display = designerStep === totalPages - 1 ? 'none' : '';
+            $('btnSavePlaybook').style.display = designerStep === totalPages - 1 ? '' : 'none';
+        };
         const pbExec = (editorId, cmd, val) => {
             const editor = $(editorId);
             editor.focus();
@@ -6175,13 +6941,32 @@
             }
             currentDesignerSteps = pb ? pb.steps.map(s => ({ ...s })) : [{ label: '', prompt: '' }];
             renderDesignerSteps();
+            // Reset wizard to step 0 (or step 0 with clean state)
+            designerStep = 0;
+            for (let i = 0; i < 3; i++) {
+                const p = $('designerPage' + i);
+                p.classList.remove('wizard-active', 'slide-in-right', 'slide-in-left');
+                const dot = $('designerDot' + i);
+                const label = $('designerLabel' + i);
+                dot.classList.remove('active', 'completed');
+                label.classList.remove('active', 'completed');
+                dot.textContent = i + 1;
+            }
+            $('designerPage0').classList.add('wizard-active');
+            $('designerDot0').classList.add('active');
+            $('designerLabel0').classList.add('active');
+            $('designerLine0').classList.remove('completed');
+            $('designerLine1').classList.remove('completed');
+            $('btnDesignerBack').style.display = 'none';
+            $('btnDesignerNext').style.display = '';
+            $('btnSavePlaybook').style.display = 'none';
             openModal('designerModal');
         };
 
         const renderDesignerSteps = () => {
             const container = $('designerSteps');
             container.innerHTML = currentDesignerSteps.map((s, idx) => `
-                <div style="background: var(--surface-inset); border: var(--border); border-radius: 10px; padding: 14px; position: relative;">
+                <div class="designer-step-card">
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
                         <span style="background: var(--accent); color: white; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0;">${idx + 1}</span>
                         <input type="text" placeholder="Step Label" value="${s.label}" onchange="updateDesignerStep(${idx}, 'label', this.value)" style="flex: 1; border-width: 0 0 1px 0; border-radius: 0; padding: 4px 0; font-weight: 600;">
@@ -6246,7 +7031,7 @@
         $('btnAutoArchitect').onclick = async () => {
             const name = $('pbName').value;
             if (!name) return showToast('Enter a name for the playbook first');
-            $('btnAutoArchitect').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Architecting...';
+            $('btnAutoArchitect').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> AI is designing...';
             try {
                 const archPrompt = `Design a professional multi-step prompt playbook named "${name}". Return ONLY a JSON object with strictly these keys: globalInstructions (string), tools (array of strings), steps (array of {label, prompt}). Make the steps strategic and high-value.`;
                 const res = await api.post('/api/chat/gemini', {
@@ -6260,11 +7045,12 @@
                 $('pbTools').value = pbData.tools.join(', ');
                 currentDesignerSteps = pbData.steps;
                 renderDesignerSteps();
-                showToast('Architecture generated');
+                showToast('Architecture generated — review and save');
+                setDesignerStep(2);
             } catch (err) {
                 showToast('Architect failed: ' + err.message);
             } finally {
-                $('btnAutoArchitect').innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Architect';
+                $('btnAutoArchitect').innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Let AI design this playbook';
             }
         };
 
@@ -6470,7 +7256,7 @@
                         const time = t.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
                         const formatted = formatScratch(e.content);
                         const escapedContent = e.content.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
-                        feedHTML += `<div class="scratch-entry" id="scratch-${e.id}">
+                        feedHTML += `<div class="scratch-entry stagger-item" id="scratch-${e.id}">
                             <span class="scratch-time">${time}</span>
                             <span class="scratch-content" onclick="editScratch('${e.id}')" title="Click to edit">${formatted}</span>
                             <button class="scratch-action scratch-copy" onclick="copyScratch('${e.id}')" title="Copy"><i class="fa-solid fa-copy"></i></button>
@@ -6580,14 +7366,22 @@
         // --- INIT ---
         // --- GLOBAL SEARCH ---
         const openGlobalSearch = () => {
-            $('searchOverlay').classList.add('open');
+            const overlay = $('searchOverlay');
+            overlay.classList.remove('search-closing');
+            overlay.classList.add('open');
             $('globalSearchInput').value = '';
             $('globalSearchResults').innerHTML = `<div class="search-results-empty"><i class="fa-solid fa-magnifying-glass"></i>Type to search across everything...</div>`;
             setTimeout(() => $('globalSearchInput').focus(), 50);
         };
 
         const closeGlobalSearch = () => {
-            $('searchOverlay').classList.remove('open');
+            const overlay = $('searchOverlay');
+            overlay.classList.add('search-closing');
+            overlay.classList.remove('open');
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                overlay.classList.remove('search-closing');
+            }, 150);
         };
 
         const highlightMatch = (text, query) => {
@@ -6773,7 +7567,7 @@
                 html += `<div class="search-group-label">${cfg.label}s (${items.length})</div>`;
                 items.slice(0, 8).forEach(item => {
                     html += `
-                        <div class="search-result" onclick="globalSearchResults_actions['${item.type}_${item.id}']()">
+                        <div class="search-result stagger-item" onclick="globalSearchResults_actions['${item.type}_${item.id}']()">
                             <div class="search-result-icon" style="background: ${cfg.color}15; color: ${cfg.color};">
                                 <i class="fa-solid ${cfg.icon}"></i>
                             </div>
@@ -6834,6 +7628,7 @@
                 $('agendaResizeHandle').style.display = '';
                 $('mainContent').style.gridTemplateRows = 'var(--agenda-height, 300px) auto 1fr';
             }
+            $('dynamicView').classList.add('view-enter');
             if (state.view === 'dashboard') renderDashboard();
             else if (state.view === 'playbooks') renderPlaybooks();
             else if (state.view === 'logs') renderLogs();
@@ -6860,8 +7655,16 @@
                 icon.onclick = () => {
                     document.querySelector('.nav-icon.active')?.classList.remove('active');
                     icon.classList.add('active');
+                    icon.classList.add('nav-ping');
+                    setTimeout(() => icon.classList.remove('nav-ping'), 400);
                     state.view = icon.dataset.view;
                     localStorage.setItem('cc_current_view', state.view);
+                    // Clear previous view immediately to prevent flash
+                    const dv = $('dynamicView');
+                    dv.classList.remove('view-enter');
+                    dv.innerHTML = '';
+                    void dv.offsetHeight;
+                    dv.classList.add('view-enter');
                     // Hide agenda on docs view, expand dynamic-view to full height
                     const agenda = document.querySelector('.agenda-container');
                     const main = $('mainContent');
@@ -6900,20 +7703,36 @@
                 };
             });
 
-            $('logoToggle').onclick = () => {
+            $('logoToggle').addEventListener('click', (e) => {
+                e.stopPropagation();
                 state.view = 'dashboard';
                 localStorage.setItem('cc_current_view', 'dashboard');
                 document.querySelector('.nav-icon.active')?.classList.remove('active');
+                const dv = $('dynamicView');
+                dv.classList.remove('view-enter');
+                dv.innerHTML = '';
+                void dv.offsetHeight;
+                dv.classList.add('view-enter');
                 const agenda = document.querySelector('.agenda-container');
                 agenda.style.display = '';
                 $('agendaResizeHandle').style.display = '';
                 $('mainContent').style.gridTemplateRows = 'var(--agenda-height, 300px) auto 1fr';
                 renderDashboard();
-            };
+                renderAgenda();
+            });
 
-            $('btnWorkstations').onclick = () => {
+            $('btnWorkstations').onclick = (e) => {
+                e.stopPropagation();
                 $('sidebar').classList.toggle('collapsed');
             };
+
+            // Close sidebar when clicking outside
+            document.addEventListener('click', (e) => {
+                const sidebar = $('sidebar');
+                if (!sidebar.classList.contains('collapsed') && !sidebar.contains(e.target) && e.target.id !== 'btnWorkstations' && !$('btnWorkstations').contains(e.target)) {
+                    sidebar.classList.add('collapsed');
+                }
+            });
 
             // Chat panel resize
             const resizeHandle = $('chatResizeHandle');
@@ -7106,7 +7925,7 @@
                 if (!confirm('This will permanently erase ALL data. Are you sure?')) return;
                 const typed = prompt('Type "DELETE" to confirm:');
                 if (typed !== 'DELETE') { showToast('Reset cancelled'); return; }
-                await api.del('/api/reset');
+                await apiCall('/api/reset', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: 'DELETE_ALL_DATA' }) });
                 location.reload();
             };
 
