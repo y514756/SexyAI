@@ -91,6 +91,65 @@ create table if not exists radar_prompts (
   created_at timestamptz default now()
 );
 
+-- Radar Reports (structured nightlife reports from Gemini)
+create table if not exists radar_reports (
+  id uuid primary key default gen_random_uuid(),
+  city text not null default 'General',
+  vibe_score integer not null,
+  vibe_label text not null,
+  radar_blips jsonb default '[]',
+  insider_take text not null,
+  created_at timestamptz default now()
+);
+
+-- Industry Reports (structured industry intel from Gemini)
+create table if not exists industry_reports (
+  id uuid primary key default gen_random_uuid(),
+  sector text,
+  global_impact_score integer,
+  market_label text,
+  radar_blips jsonb default '[]',
+  insider_take text,
+  created_at timestamptz default now()
+);
+alter table industry_reports disable row level security;
+
+-- Sandbox Reports (CPO strategic synthesis from industry intel)
+CREATE TABLE IF NOT EXISTS sandbox_reports (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  widget_title text,
+  sprint_focus text,
+  sandbox_ideas jsonb DEFAULT '[]',
+  source_industry_report_id uuid,
+  created_at timestamptz DEFAULT now()
+);
+ALTER TABLE sandbox_reports DISABLE ROW LEVEL SECURITY;
+
+-- Starred Sandbox Ideas (bookmarked CPO ideas)
+CREATE TABLE IF NOT EXISTS starred_sandbox_ideas (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  sandbox_report_id uuid REFERENCES sandbox_reports(id) ON DELETE CASCADE,
+  concept_name text NOT NULL,
+  idea_data jsonb NOT NULL,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(sandbox_report_id, concept_name)
+);
+ALTER TABLE starred_sandbox_ideas DISABLE ROW LEVEL SECURITY;
+
+-- Document Versions (edit history snapshots)
+create table if not exists document_versions (
+  id uuid primary key default gen_random_uuid(),
+  document_id uuid not null references documents(id) on delete cascade,
+  title text not null,
+  content text not null,
+  folder text,
+  tags jsonb default '[]',
+  company text,
+  version_number integer not null default 1,
+  created_at timestamptz default now()
+);
+alter table document_versions disable row level security;
+
 -- Disable RLS on all tables (single-operator app, server-side only access)
 alter table companies disable row level security;
 alter table playbooks disable row level security;
@@ -100,3 +159,4 @@ alter table chat_messages disable row level security;
 alter table tools disable row level security;
 alter table radar_updates disable row level security;
 alter table radar_prompts disable row level security;
+alter table radar_reports disable row level security;

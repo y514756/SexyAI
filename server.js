@@ -49,6 +49,8 @@ app.use('/auth/login', rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: {
 app.use('/api/chat/gemini', rateLimit({ windowMs: 60 * 1000, max: 10, message: { error: 'Rate limit exceeded' } }));
 app.use('/api/radar/scan', rateLimit({ windowMs: 60 * 1000, max: 5, message: { error: 'Rate limit exceeded' } }));
 app.use('/api/radar/report', rateLimit({ windowMs: 60 * 1000, max: 5, message: { error: 'Rate limit exceeded' } }));
+app.use('/api/radar/industry', rateLimit({ windowMs: 60 * 1000, max: 5, message: { error: 'Rate limit exceeded' } }));
+app.post('/api/radar/sandbox', rateLimit({ windowMs: 60 * 1000, max: 5, message: { error: 'Rate limit exceeded' } }));
 app.use('/api', rateLimit({ windowMs: 60 * 1000, max: 200, message: { error: 'Rate limit exceeded' } }));
 
 app.use(express.json({ limit: '10mb' }));
@@ -395,7 +397,8 @@ app.get('/api/backup', async (req, res) => {
       'companies', 'playbooks', 'tasks', 'logs', 'chat_messages',
       'chat_sessions', 'tools', 'calendar_events', 'documents',
       'ideas', 'contacts', 'recurring_tasks', 'recurring_completions',
-      'radar_updates', 'radar_prompts', 'radar_reports', 'scratches'
+      'radar_updates', 'radar_prompts', 'radar_reports', 'scratches',
+      'industry_reports', 'sandbox_reports', 'starred_sandbox_ideas'
     ];
     const results = await Promise.all(
       tables.map(t => supabase.from(t).select('*').then(r => [t, r.data || []]))
@@ -427,7 +430,10 @@ app.post('/api/migrate', async (req, res) => {
     radar_updates: 'radar_updates',
     radar_prompts: 'radar_prompts',
     radar_reports: 'radar_reports',
-    scratches: 'scratches'
+    scratches: 'scratches',
+    industry_reports: 'industry_reports',
+    sandbox_reports: 'sandbox_reports',
+    starred_sandbox_ideas: 'starred_sandbox_ideas'
   };
   try {
     for (const [key, table] of Object.entries(tableMap)) {
@@ -1063,6 +1069,400 @@ app.get('/api/radar/reports/latest', async (req, res) => {
 });
 
 // ─────────────────────────────────────────
+// INDUSTRY INTEL REPORTS
+// ─────────────────────────────────────────
+app.post('/api/radar/industry', async (req, res) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured on server' });
+
+  try {
+    // Fetch recent reports to avoid repetition
+    const { data: recentReports } = await supabase
+      .from('industry_reports')
+      .select('radar_blips')
+      .order('created_at', { ascending: false })
+      .limit(3);
+    const previousHeadlines = (recentReports || [])
+      .flatMap(r => (r.radar_blips || []).map(b => b.headline || b.entity))
+      .filter(Boolean);
+    const exclusionBlock = previousHeadlines.length > 0
+      ? `\n\nIMPORTANT: Do NOT repeat these stories that were already covered in recent reports:\n${previousHeadlines.map(h => '- ' + h).join('\n')}\n\nFind DIFFERENT stories, angles, or developments.`
+      : '';
+
+    // --- PASS 1: SEARCH GROUNDING (real-time industry intel) ---
+    const searchResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: `Search for news from the last 7 days about:
+1. Competitor activity: Grindr, Sniffies, Lex, Archer, DICE, Partiful — any product launches, funding, controversies, feature updates
+2. AI integration in dating and social apps — new AI features, chatbots, matching algorithms, safety tools
+3. Gay nightlife industry shifts — major venue openings/closings, cultural trends, circuit party news, Pride planning
+4. Nightlife tech trends relevant to a queer nightlife + AI dating app (Gen Z socializing patterns, geospatial discovery, safety tech)
+
+Return the top 3-5 most significant stories with headlines, key entities involved, brief summaries, and source URLs. Be specific and factual.${exclusionBlock}` }] }],
+          tools: [{ google_search: {} }],
+          generationConfig: { temperature: 0.85, topP: 0.95, topK: 40 }
+        })
+      }
+    );
+
+    if (!searchResponse.ok) {
+      const errText = await searchResponse.text();
+      return res.status(searchResponse.status).json({ error: errText.substring(0, 500) });
+    }
+
+    const searchData = await searchResponse.json();
+    const rawIntel = searchData.candidates[0].content.parts.filter(p => p.text).map(p => p.text).join('\n');
+
+    // Extract grounding source URLs from metadata
+    const groundingChunks = searchData.candidates[0]?.groundingMetadata?.groundingChunks || [];
+    const sourceUrls = groundingChunks
+      .filter(c => c.web?.uri)
+      .map(c => ({ title: c.web.title || '', url: c.web.uri }));
+    const sourcesBlock = sourceUrls.length > 0
+      ? '\n\nSOURCE URLS (use these exact URLs for each blip):\n' + sourceUrls.map((s, i) => `${i + 1}. ${s.title} — ${s.url}`).join('\n')
+      : '';
+
+    // --- PASS 2: FORMAT INTO STRUCTURED JSON ---
+    const formatResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: 'You are the LOKKR Industry Intel Radar — strategic intelligence for a queer nightlife + AI dating app founder. Sharp, concise, no fluff. You analyze competitor moves, industry trends, and market signals. You MUST use the exact source URLs provided — do not make up URLs.' }] },
+          contents: [{ role: 'user', parts: [{ text: `Format this raw industry intel into a structured LOKKR Industry Intelligence report. Assign impact scores based on how directly this affects a queer nightlife + AI dating startup. Each blip MUST include a real source URL from the list below:\n\n${rawIntel}${sourcesBlock}` }] }],
+          generationConfig: {
+            temperature: 0.7,
+            topP: 0.95,
+            topK: 40,
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: 'OBJECT',
+              properties: {
+                sector: { type: 'STRING', description: 'Primary sector covered (e.g. Queer Nightlife + Dating Tech)' },
+                global_impact_score: { type: 'INTEGER', description: 'Overall market impact 0-100 for LOKKR strategy' },
+                market_label: { type: 'STRING', description: '2-word market status label (e.g. SHIFTING FAST, STEADY GROWTH, HIGH ALERT)' },
+                radar_blips: {
+                  type: 'ARRAY',
+                  items: {
+                    type: 'OBJECT',
+                    properties: {
+                      entity: { type: 'STRING', description: 'Company or trend name' },
+                      impact_score: { type: 'INTEGER', description: '0-100 impact on LOKKR strategy' },
+                      status: { type: 'STRING', description: 'Short status tag (e.g. AI ROLLOUT, FUNDING, CLOSING, EXPANSION, CONTROVERSY, TREND)' },
+                      headline: { type: 'STRING', description: 'One-line headline summary' },
+                      strategic_value: { type: 'STRING', description: 'One sentence: why this matters for LOKKR specifically — product, positioning, or competitive edge.' },
+                      url: { type: 'STRING', description: 'Source article URL' }
+                    },
+                    required: ['entity', 'impact_score', 'status', 'headline', 'strategic_value', 'url']
+                  }
+                },
+                insider_take: { type: 'STRING', description: '2-3 sentences of strategic analysis for LOKKR founder. What does this mean for product/positioning? Confident, opinionated, actionable.' }
+              },
+              required: ['sector', 'global_impact_score', 'market_label', 'radar_blips', 'insider_take']
+            }
+          }
+        })
+      }
+    );
+
+    if (!formatResponse.ok) {
+      const errText = await formatResponse.text();
+      return res.status(formatResponse.status).json({ error: errText.substring(0, 500) });
+    }
+
+    const formatData = await formatResponse.json();
+    const text = formatData.candidates[0].content.parts.filter(p => p.text).map(p => p.text).join('');
+    const parsed = JSON.parse(text);
+
+    const { data, error } = await supabase
+      .from('industry_reports')
+      .insert({
+        sector: parsed.sector,
+        global_impact_score: Math.max(0, Math.min(100, parsed.global_impact_score)),
+        market_label: parsed.market_label,
+        radar_blips: parsed.radar_blips || [],
+        insider_take: parsed.insider_take
+      })
+      .select()
+      .single();
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/radar/industry/reports', async (req, res) => {
+  const { data, error } = await supabase
+    .from('industry_reports')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.get('/api/radar/industry/reports/latest', async (req, res) => {
+  const { data, error } = await supabase
+    .from('industry_reports')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+// ─────────────────────────────────────────
+// SANDBOX (CPO Strategic Synthesis)
+// ─────────────────────────────────────────
+const LOKKR_SYSTEM_INSTRUCTION = `You are the Chief Product Officer and Lead Architect for LOKKR.
+Core Philosophy: "The Night Journey"—get users off their phones and into physical venues.
+
+You must strictly use the following LOKKR architecture and data functionality to design your features. DO NOT invent modules or data layers that do not exist here:
+
+--- LOKKR COMPLETE DATA FUNCTIONALITY & ARCHITECTURE ---
+Codebase Stats: 1,060+ source files | ~330,000 lines of code | 145 pages | 111 database tables
+
+1. Authentication & Security: JWT, passwordless codes, WebAuthn biometric, progressive lockout, Admin MFA, disposable email blocking, Emailable verification, 6-digit email verification codes with admin toggle and grace period, trust proxy IPv6 hardening.
+2. Spam & Bot Control: Honeypot fields, Turnstile/math challenges, VoIP blocking, rate limiting, IP fraud prevention, 18 spam TLD blocking (.live/.cam/.xxx etc.), gayhot.live + Punycode domain detection.
+3. Security Monitoring: Security events, AI security reports, admin dashboard, proactive analysis, trusted devices, system_logs DB persistence (dual-write memory + Neon), security event cleanup scheduler (configurable retention), alert debounce fix, PII redaction in AI prompts.
+4. User Management: Profiles, photos, mood, tagging, privacy, age verification, soft deletion, display names, phone verification.
+5. Onboarding: 3-screen animated iOS glassmorphism, GSAP animations, Emailable verification.
+6. WebSocket Chat Engine: Real-time WebSocket infrastructure for instant message delivery, typing indicators, presence.
+7. Messaging System: DMs, pagination, optimistic updates, date-aware timestamps, quick reactions, hold-to-unsend, voice messages.
+8. Chat Translation: In-chat message translation for cross-language conversations.
+9. Chat Archive System: Archive/unarchive conversations, hidden chats management.
+10. Saved Phrases / Quick Replies: Save and autocomplete frequently used chat phrases.
+11. Group Chat: Independent group chat with its own UI and data layer.
+12. User Discovery Grid: Grid/map, advanced filters, Crowd Filter Lens, nearby/trending/new, presence indicators, scout mode server-side check-in enforcement, guest cart overlay with add/remove toggles, compass location picker button.
+13. Cruizr Map: Real-time GPS map, location manager, permission handling, privacy controls.
+14. Likes & Matches: Like system, mutual matching, notifications, history.
+15. Tempt List: Curated attraction list with nudges, tags, interaction tracking.
+16. Chemistry Check: Compatibility/chemistry scoring between users.
+17. Fling Forecast: AI-powered compatibility suggestions with Redis caching, analytics dashboard.
+18. Your Turn Badge: Visual indicator showing whose turn it is to reply in conversations.
+19. Recently Chatted Badge: Badge on profile photos showing recent chat activity.
+20. DripFeed System: Full social feed, polls, swipe votes, infinite scroll, moderation, comments, likes, saves. Enterprise audit: service layer extraction, 5-file route split, Redis cache-aside (6 entity types), rate limiting on 8 write endpoints, structured error handling, shared DripPostWithMeta type.
+21. DripFeed Search: Server-side search across 8 fields with relevance scoring, Redis caching.
+22. DripTease / LokkTeases: Photo sharing with AI moderation, commercial blocking, caption checks, gamified unlock.
+23. Vault Unlock System: 5-stage gamified photo unlock, mood glow, haptic feedback, temperature rating.
+24. Whisper Daddy: Anonymous/pseudonymous messaging or interaction feature.
+25. Fortunes: Personalized fortune/horoscope content.
+26. Heat Score System: Two-mode venue scoring: Historical Backbone uses per-venue day/hour busyness JSON as base score (0-100) with live signals as ±10 modifier; Live-Only fallback uses 4-bucket additive model for venues without historical data. Event scoring: 7 components (RSVP 20pts, Analytics 20pts, Crowd Flow 40pts, Proximity 10pts, Nearby Users 20pts, Boost 5pts, Velocity 5pts) totalling 120pts, capped at 100. Hourly background recalculation service with batched SQL updates and Redis cache invalidation. Venue timezone support. Admin heat score analytics dashboard. Per-venue show/hide toggle.
+27. Heat Stories: Instagram-style stories with posting, viewing, moderation.
+28. Events System: Event discovery, RSVP, moderation, pagination, public sharing, SERVED badges, smart ordering, Rich Description JSON renderer with animated accordion sections, admin bulk import.
+29. Venues System: Venue management, AI summaries, permanent pages, slugs, hero images, city filtering, Rich Description JSON renderer, venue check-in badge with denormalized name/slug on user row.
+30. Event & Venue Pulse Board: Live discussion feeds, threaded replies, cursor pagination.
+31. LokkReviews: Venue reviews with reactions, replies, reply reactions, AI moderation.
+32. Guest Lists: VIP system, invites, chat, analytics, public previews, conversions. Guest cart browse-to-invite flow: singleton store with pub-sub and sessionStorage persistence, floating glassmorphic pill UI, Framer Motion slide-up batch invite modal.
+33. Nightlife Story Blog System: LokkrLeaks, Nightlife Stories, Gay Nightlife Guides with DripFeed integration, SEO.
+34. AI Content Moderation: 6 moderation systems (photos, text, stories, teases, reviews, chat images) via Gemini.
+35. User Reports & Moderation: User reporting system with moderation layer, admin review, warnings, action tracking.
+36. Share Modal: Universal share modal for sharing content across the platform and externally.
+37. Travel Tagging: Profile travel status/destination tagging for discovery.
+38. Stripe Payments: 4-tier subscriptions, Checkout + Link, Customer Portal, webhooks, kill switch.
+39. Referral Program: Codes, commissions, fraud prevention, admin payouts, Stripe integration.
+40. Admin Dashboard: 392KB modular dashboard, 13+ extracted components, full management suite.
+41. Analytics Suite: PostHog, live analytics, push analytics, event analytics, user behavior, Fling Forecast.
+42. Location System: Location picker, privacy heat map, distance controls, location manager, consistent auto-prompt across Grid/Scene/Events pages, tappable header location pill.
+43. Music Integration: SoundCloud playlists, hub, library, track management, analytics.
+44. PWA & Notifications: Push notifications, daily digest, admin blast, iOS fixes, subscription resilience, global error boundary with crash recovery UI and server-side error reporting.
+45. SEO Infrastructure: Dynamic sitemap (37+ URLs) with 1-hour cache, robots.txt, meta tags, Open Graph, structured data. SSR crawler layer. Consolidated SSR in public-pages.ts. Server-side og:image.
+46. City Hubs: Dynamic city pages with admin content, real venue/event data.
+47. Redis Caching: 3-layer caching, 40+ endpoints, smart invalidation, feature flags.
+48. Email System: Resend integration, campaign management with scheduled delivery, templates with image upload and mustache syntax, 6-digit verification codes. Svix webhook signature verification. Migration for 7 email tables.
+49. Support Tickets: User ticket submission, admin management.
+50. Profile Views: Self-contained view tracking with dedicated schema and APIs.
+51. Story Creator: Camera + editor with filters, text overlays, Snapchat AR ready.
+52. R2 Object Storage: Cloudflare R2 bucket integration for media, archives, uploads.
+53. Desktop Viewport: Responsive desktop layout adaptation beyond mobile-first design.
+54. Code Cleanup & Optimization: TypeScript type safety, dead code archival, speed optimization. DripFeed enterprise architecture audit. Shared useLiquidNeonAnimation hook.
+55. Mutual Unlock System: Private photo request modal with optional mutual unlock toggle, purple-themed vault UI, optimistic updates, revoke flow, vault alert integration in chat nav.
+56. Scout Mode: Profile visibility controls with 14 section toggles. Per-category tag filtering. Server-side grid check-in enforcement (bulk query strips data for hidden users). Selective user unlocks, search-to-unlock flow, bulk clear, optimistic mutations, bidirectional block filtering.
+57. Tier Access Control System: DB-backed feature gating across 107 features in 28 categories. 4-table PostgreSQL schema (tier_policies, tier_feature_rules, tier_overrides, tier_rate_limit_counters). 3-tier lookup. Redis caching. Backend requireFeature/requireTier middleware. Frontend TierGate component suite (6 variants).
+58. Rich Description System: Animated JSON-driven section renderer for venue and event detail pages. Markdown-lite support.
+59. Customizable Bottom Navigation: User-configurable bottom nav bar with 3 customizable middle slots. Customize Menu page with live preview strip, numbered glassmorphism drag-to-reorder cards.
+60. The Back Room (Editorial Magazine): Full editorial magazine system with issues and articles. Sections-based content engine with video support. Cursor-paginated search. GSAP scroll-triggered animations. 2 DB tables, dedicated service layer.
+61. Desire Signal: User desire/interest signaling displayed as profile pill card with pink gradient styling, controllable via Scout Mode.
+62. Custom Icon Library (LokkrIcons): 6 gay-coded SVG icon components on 24x24 grid.
+
+--- SYSTEM DATA INTEGRATION RULES ---
+When generating technical specs in the JSON output, you must explicitly detail the database logic and API flow based on these known relationships:
+- Heat Scores (Mod 26) calculate data in the background, but the final score is denormalized directly onto the Venue row (Mod 29) for fast reads.
+- Checking into a venue updates a user's denormalized venue slug (Mod 29) AND updates the live ±10 modifier for that venue's Heat Score (Mod 26).
+- Tier access (Mod 57) MUST be enforced at the Express route level using the 'requireFeature' middleware before hitting the database.
+- Scout Mode (Mod 56) operates directly at the SQL level; it strips data from the payload before it leaves the server if a user is hidden.`;
+
+app.post('/api/radar/sandbox', async (req, res) => {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'OPENAI_API_KEY not configured on server' });
+
+  try {
+    let industryNews = req.body.industryNews;
+
+    // If no industry news provided, auto-fetch latest from DB
+    if (!industryNews) {
+      const { data: latestReport } = await supabase
+        .from('industry_reports')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!latestReport) return res.status(400).json({ error: 'No industry report available. Generate one first.' });
+      industryNews = latestReport;
+    }
+
+    const newsText = typeof industryNews === 'string' ? industryNews : JSON.stringify(industryNews);
+
+    // Fetch previous sandbox ideas to avoid repetition
+    const { data: recentSandbox } = await supabase
+      .from('sandbox_reports')
+      .select('sandbox_ideas')
+      .order('created_at', { ascending: false })
+      .limit(3);
+    const previousConcepts = (recentSandbox || [])
+      .flatMap(r => (r.sandbox_ideas || []).map(i => i.concept_name + ': ' + (i.the_pivot || '').substring(0, 80)))
+      .filter(Boolean);
+    const exclusionBlock = previousConcepts.length > 0
+      ? `\n\nIMPORTANT: These ideas were already generated in previous reports. Do NOT repeat them or generate similar concepts. Come up with completely DIFFERENT strategic angles:\n${previousConcepts.map(c => '- ' + c).join('\n')}`
+      : '';
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        temperature: 0.9,
+        messages: [
+          {
+            role: 'system',
+            content: LOKKR_SYSTEM_INSTRUCTION + `\n\nYour job right now: take industry intelligence and generate 3 concrete Sandbox Ideas that exploit competitor weaknesses using EXISTING LOKKR modules. Every idea must be buildable with the current architecture — no new modules, only creative recombinations of the 62 modules above. Think like a CPO in a war room. Be specific about which modules to leverage, cite them by number, and explain the data flow.`
+          },
+          {
+            role: 'user',
+            content: `Here is the latest industry intelligence:\n\n${newsText}\n\nGenerate 3 Sandbox Ideas that exploit these competitor weaknesses or market gaps using LOKKR's existing 62-module architecture. Each idea should be a concrete feature pivot. For 'dev_velocity', use exactly one of: 'DAYS', 'WEEKS', or 'MONTHS'.${exclusionBlock}`
+          }
+        ],
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
+            name: 'sandbox_report',
+            strict: true,
+            schema: {
+              type: 'object',
+              properties: {
+                widget_title: { type: 'string', description: 'A punchy 2-4 word title for this synthesis batch (e.g., COUNTER-STRIKE PLAYBOOK, EXPLOIT WINDOW, PIVOT ARSENAL)' },
+                sprint_focus: { type: 'string', description: 'One sentence describing the strategic theme tying these ideas together' },
+                sandbox_ideas: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      concept_name: { type: 'string', description: 'Bold, memorable concept name (e.g., GHOST PROTOCOL, VENUE VORTEX)' },
+                      target_enemy: { type: 'string', description: 'The competitor or trend this exploits (e.g., Grindr, Sniffies, industry trend)' },
+                      the_pivot: { type: 'string', description: '2-3 sentences: what to build and why it wins. Be specific about user value.' },
+                      modules_to_leverage: { type: 'array', items: { type: 'string' }, description: 'List of LOKKR module names from the 62-module architecture' },
+                      dev_velocity: { type: 'string', enum: ['DAYS', 'WEEKS', 'MONTHS'], description: 'Estimated build time' }
+                    },
+                    required: ['concept_name', 'target_enemy', 'the_pivot', 'modules_to_leverage', 'dev_velocity'],
+                    additionalProperties: false
+                  }
+                }
+              },
+              required: ['widget_title', 'sprint_focus', 'sandbox_ideas'],
+              additionalProperties: false
+            }
+          }
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      return res.status(response.status).json({ error: errText.substring(0, 500) });
+    }
+
+    const openaiData = await response.json();
+    const parsed = JSON.parse(openaiData.choices[0].message.content);
+
+    const sourceId = typeof industryNews === 'object' && industryNews.id ? industryNews.id : null;
+
+    const { data, error } = await supabase
+      .from('sandbox_reports')
+      .insert({
+        widget_title: parsed.widget_title,
+        sprint_focus: parsed.sprint_focus,
+        sandbox_ideas: parsed.sandbox_ideas || [],
+        source_industry_report_id: sourceId
+      })
+      .select()
+      .single();
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/radar/sandbox/reports', async (req, res) => {
+  const { data, error } = await supabase
+    .from('sandbox_reports')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.get('/api/radar/sandbox/reports/latest', async (req, res) => {
+  const { data, error } = await supabase
+    .from('sandbox_reports')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+// --- Starred Sandbox Ideas ---
+app.get('/api/radar/sandbox/starred', async (req, res) => {
+  const { data, error } = await supabase
+    .from('starred_sandbox_ideas')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.post('/api/radar/sandbox/star', async (req, res) => {
+  const { sandbox_report_id, concept_name, idea_data } = req.body;
+  if (!concept_name || !idea_data) return res.status(400).json({ error: 'concept_name and idea_data are required' });
+  const { data, error } = await supabase
+    .from('starred_sandbox_ideas')
+    .upsert({ sandbox_report_id, concept_name, idea_data }, { onConflict: 'sandbox_report_id,concept_name' })
+    .select()
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.delete('/api/radar/sandbox/star/:id', async (req, res) => {
+  const { error } = await supabase.from('starred_sandbox_ideas').delete().eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// ─────────────────────────────────────────
 // SCRATCHES (Scratch Pad)
 // ─────────────────────────────────────────
 app.get('/api/scratches', async (req, res) => {
@@ -1149,7 +1549,8 @@ async function runScheduledBackup() {
       'companies', 'playbooks', 'tasks', 'chat_messages',
       'tools', 'calendar_events', 'documents', 'ideas',
       'contacts', 'recurring_tasks', 'recurring_completions',
-      'radar_updates', 'radar_prompts', 'scratches'
+      'radar_updates', 'radar_prompts', 'scratches',
+      'industry_reports', 'sandbox_reports', 'starred_sandbox_ideas'
     ];
     const results = await Promise.all(
       tables.map(t => supabase.from(t).select('*').then(r => [t, r.data || []]))
