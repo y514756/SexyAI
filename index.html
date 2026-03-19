@@ -2243,10 +2243,10 @@
                 padding-bottom: 6px !important;
             }
             .agenda-header h3 {
-                font-size: 12px !important;
+                font-size: 14px !important;
             }
             .agenda-stats {
-                font-size: 11px !important;
+                font-size: 13px !important;
                 gap: 8px !important;
                 margin-bottom: 4px !important;
             }
@@ -2272,7 +2272,7 @@
                 display: flex !important;
                 align-items: center;
                 justify-content: center;
-                width: 30px;
+                width: 36px;
                 height: auto;
                 align-self: stretch;
                 border-radius: 6px;
@@ -2334,13 +2334,13 @@
                 padding: 4px;
             }
             .cal-day-num {
-                font-size: 11px;
-                width: 22px;
-                height: 22px;
+                font-size: 13px;
+                width: 24px;
+                height: 24px;
             }
             .cal-event-pill {
-                font-size: 8px;
-                padding: 1px 3px;
+                font-size: 13px;
+                padding: 2px 4px;
             }
             .cal-month-label {
                 font-size: 16px;
@@ -2352,7 +2352,7 @@
             }
             .cal-day-header {
                 padding: 6px 2px;
-                font-size: 9px;
+                font-size: 13px;
             }
 
             /* --- IDEA PIPELINE (Kanban): horizontal scroll --- */
@@ -2509,7 +2509,7 @@
 
             /* --- TYPOGRAPHY & TOUCH TARGETS --- */
             body {
-                font-size: 15px !important;
+                font-size: 16px !important;
             }
             .hide-mobile { display: none !important; }
             /* Prevent iOS auto-zoom on focus — minimum 16px */
@@ -2530,10 +2530,10 @@
                 animation: none !important;
             }
             .task-text, .checklist-item-text {
-                font-size: 15px !important;
+                font-size: 16px !important;
             }
             .activity-item, .scratch-content {
-                font-size: 15px !important;
+                font-size: 16px !important;
             }
             h1 { font-size: 22px !important; }
 
@@ -2541,14 +2541,14 @@
             .quick-action, .cal-nav-btn, .cal-today-btn,
             .checklist-nav-btn, .checklist-today-btn, .crm-filter-pill,
             .doc-folder-tab, .agent-tab, .crm-view-toggle button {
-                min-height: 0;
+                min-height: 36px;
                 padding: 6px 12px !important;
                 font-size: 13px !important;
                 border-radius: 8px !important;
             }
             .cal-nav-btn, .checklist-nav-btn {
-                width: 32px !important;
-                height: 32px !important;
+                width: 36px !important;
+                height: 36px !important;
                 padding: 4px !important;
             }
 
@@ -2645,6 +2645,34 @@
             .rec-task-item .rec-task-actions {
                 opacity: 1 !important;
             }
+
+            /* --- HEADING HIERARCHY --- */
+            h2 { font-size: 18px !important; }
+            h3 { font-size: 16px !important; }
+            .dash-section-title { font-size: 13px !important; }
+
+            /* --- MINIMUM FONT SIZES FOR READABILITY --- */
+            .doc-card-preview { font-size: 13px !important; }
+            .idea-card-body { font-size: 13px !important; }
+            .doc-tag, .doc-folder-badge { font-size: 13px !important; }
+            .badge { font-size: 13px !important; }
+            .crm-type-badge, .crm-stage-badge { font-size: 13px !important; }
+            .idea-status-badge, .idea-priority-badge { font-size: 13px !important; }
+            .checklist-item-text { font-size: 15px !important; }
+            .checklist-item-ws { font-size: 13px !important; }
+            .scratch-time { font-size: 13px !important; }
+            .scratch-entry-note { font-size: 13px !important; }
+            .crm-card-date, .crm-card-ig { font-size: 13px !important; }
+
+            /* --- OVERFLOW PREVENTION --- */
+            .crm-pb-header,
+            .crm-pb-row,
+            .doc-toolbar,
+            .cal-header,
+            .idea-quick-add {
+                max-width: 100%;
+                box-sizing: border-box;
+            }
         }
 
         @media (max-width: 480px) {
@@ -2666,9 +2694,9 @@
                 padding: 2px;
             }
             .cal-day-num {
-                font-size: 10px;
-                width: 18px;
-                height: 18px;
+                font-size: 13px;
+                width: 22px;
+                height: 22px;
             }
             .cal-event-pill {
                 display: none;
@@ -2677,7 +2705,7 @@
                 display: none;
             }
             .cal-day-header {
-                font-size: 8px;
+                font-size: 13px;
                 padding: 4px 1px;
             }
 
@@ -2698,10 +2726,10 @@
             }
 
             .checklist-week-day-name {
-                font-size: 9px;
+                font-size: 13px;
             }
             .checklist-week-day-num {
-                font-size: 13px;
+                font-size: 14px;
             }
 
             .crm-filter-bar {
