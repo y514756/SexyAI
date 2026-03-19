@@ -32,7 +32,8 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-hashes'"],
+      scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
       imgSrc: ["'self'", "data:", "https:"],
@@ -73,14 +74,15 @@ app.post('/auth/refresh', async (req, res) => {
   const { refresh_token } = req.body;
   if (!refresh_token) return res.status(400).json({ error: 'Refresh token required' });
   try {
-    // Create a temporary client to refresh the session
-    const { createClient } = require('@supabase/supabase-js');
-    const tempClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
-    await tempClient.auth.setSession({ access_token: 'expired', refresh_token });
-    const { data, error } = await tempClient.auth.refreshSession();
-    if (error || !data.session) return res.status(401).json({ error: 'Refresh failed' });
+    // Use the main supabase client to refresh directly
+    const { data, error } = await supabase.auth.refreshSession({ refresh_token });
+    if (error || !data.session) {
+      console.warn('[Auth] Refresh failed:', error?.message || 'no session returned');
+      return res.status(401).json({ error: 'Refresh failed' });
+    }
     res.json({ token: data.session.access_token, refresh_token: data.session.refresh_token });
   } catch (err) {
+    console.warn('[Auth] Refresh error:', err.message);
     res.status(401).json({ error: 'Refresh failed' });
   }
 });

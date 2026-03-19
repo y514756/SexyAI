@@ -65,16 +65,24 @@
         .logo-container {
             width: 36px;
             height: 36px;
-            padding: 4px;
             margin-bottom: 28px;
             cursor: pointer;
-            transition: var(--transition);
-            border-radius: 8px;
+            transition: transform 0.2s ease;
+            border-radius: 10px;
             position: relative;
             z-index: 10;
+            background: linear-gradient(135deg, #6366F1, #8B5CF6, #EC4899);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 20px;
+            font-weight: 800;
+            color: white;
+            letter-spacing: -1px;
+            user-select: none;
         }
         .logo-container:hover { transform: scale(1.1); }
-        .logo-container img { width: 100%; height: 100%; object-fit: contain; }
 
         .nav-icons {
             display: flex;
@@ -1981,6 +1989,592 @@
         .designer-step-card:hover {
             border-color: rgba(99, 102, 241, 0.3);
         }
+
+        /* ===== MOBILE RESPONSIVE ===== */
+        @media (max-width: 768px) {
+
+            /* --- APP WRAPPER: stack vertically --- */
+            #appWrapper {
+                flex-direction: column !important;
+                height: 100vh !important;
+                height: 100dvh !important;
+            }
+
+            /* --- ICON RAIL: bottom tab bar --- */
+            .icon-rail {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                width: 100% !important;
+                height: 56px;
+                flex-direction: row;
+                border-right: none;
+                border-top: var(--border);
+                padding: 0 4px;
+                z-index: 500;
+                background: var(--surface-inset);
+                flex-shrink: 0;
+            }
+
+            /* Logo: show as home button in bottom bar */
+            .logo-container {
+                width: 36px;
+                height: 36px;
+                min-width: 36px;
+                margin: 0;
+                font-size: 16px;
+                border-radius: 8px;
+                order: -1;
+            }
+
+            .nav-icons {
+                flex-direction: row;
+                gap: 0;
+                flex: 1;
+                justify-content: space-around;
+                overflow: visible;
+            }
+
+            /* Show only primary nav icons on mobile, hide the rest */
+            .nav-icon {
+                width: 44px;
+                height: 44px;
+                min-width: 44px;
+                font-size: 18px;
+                flex-shrink: 0;
+            }
+            .nav-icon[data-view="playbooks"],
+            .nav-icon[data-view="logs"],
+            .nav-icon[data-view="tools"],
+            .nav-icon[data-view="docs"],
+            .nav-icon[data-view="crm"],
+            .nav-icon[data-view="radar"],
+            .nav-icon[data-view="scratchpad"] {
+                display: none !important;
+            }
+            /* Show these in the more menu instead */
+            .nav-icon.mobile-revealed {
+                display: flex !important;
+            }
+
+            .nav-icon.active::after {
+                left: 50%;
+                top: auto;
+                bottom: 0;
+                transform: translateX(-50%);
+                width: 20px;
+                height: 3px;
+                border-radius: 3px 3px 0 0;
+            }
+
+            /* Hide search, settings, logout from bottom bar */
+            #openSearch,
+            #openSettings,
+            #btnLogout {
+                display: none !important;
+            }
+
+            /* Mobile more menu */
+            .mobile-more-menu {
+                position: fixed;
+                bottom: 56px;
+                left: 0;
+                right: 0;
+                background: var(--surface);
+                border-top: var(--border);
+                padding: 12px 16px;
+                z-index: 499;
+                display: none;
+                flex-wrap: wrap;
+                gap: 4px;
+                box-shadow: 0 -8px 24px rgba(0,0,0,0.3);
+                animation: staggerUp 200ms cubic-bezier(0.4, 0, 0.2, 1) both;
+            }
+            .mobile-more-menu.open { display: flex; }
+            .mobile-more-item {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 12px 16px;
+                border-radius: 10px;
+                color: var(--text-primary);
+                font-size: 14px;
+                font-weight: 500;
+                cursor: pointer;
+                width: calc(50% - 2px);
+                transition: background 0.15s;
+            }
+            .mobile-more-item:hover, .mobile-more-item:active {
+                background: var(--surface-elevated);
+            }
+            .mobile-more-item i {
+                width: 20px;
+                text-align: center;
+                color: var(--accent);
+                font-size: 16px;
+            }
+
+            /* Show the more button on mobile */
+            #btnMobileMore {
+                display: flex !important;
+            }
+
+            /* --- SIDEBAR: full-screen overlay --- */
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 56px;
+                width: 100% !important;
+                z-index: 400;
+                border-right: none;
+                transform: translateX(-100%);
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .sidebar:not(.collapsed) {
+                transform: translateX(0);
+                margin-left: 0 !important;
+            }
+            .sidebar.collapsed {
+                margin-left: 0 !important;
+                transform: translateX(-100%);
+            }
+
+            /* --- MAIN CONTENT: single column, fill space above tab bar --- */
+            .main-content {
+                grid-template-columns: 1fr !important;
+                grid-template-rows: auto auto 1fr !important;
+                width: 100%;
+                height: calc(100vh - 56px);
+                height: calc(100dvh - 56px);
+                overflow: hidden;
+            }
+
+            /* --- CHAT PANEL: full-screen overlay --- */
+            .mission-chat {
+                position: fixed !important;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 56px;
+                z-index: 450;
+                grid-column: 1 !important;
+                grid-row: 1 !important;
+                background: var(--bg);
+                border-left: none;
+                min-width: 0 !important;
+            }
+
+            /* When chat-closed, the existing rule sets display:none, which is fine */
+            /* When chat is open (no .chat-closed), it shows as full overlay */
+
+            /* Chat close button: add a visible back button area */
+            .chat-header {
+                padding: 12px 16px;
+            }
+
+            /* Hide chat resize handle on mobile */
+            .chat-resize-handle {
+                display: none !important;
+            }
+
+            /* Chat reopen button: reposition above bottom nav */
+            .chat-reopen-btn {
+                bottom: 72px !important;
+                right: 16px !important;
+            }
+
+            .chat-input-container {
+                padding: 12px 16px;
+            }
+
+            .chat-messages {
+                padding: 16px;
+                gap: 16px;
+            }
+
+            /* --- AGENDA: full width, compact --- */
+            .agenda-container {
+                grid-column: 1 !important;
+                grid-row: 1 !important;
+                border-right: none;
+                padding: 12px 16px;
+                max-height: 200px;
+                overflow-y: auto;
+            }
+
+            .agenda-resize-handle {
+                display: none;
+            }
+
+            .agenda-input-row {
+                flex-wrap: wrap;
+            }
+            .agenda-input-row input {
+                min-width: 0;
+                flex: 1 1 100%;
+            }
+            .agenda-input-row select {
+                flex: 1;
+                width: auto;
+            }
+
+            /* --- DYNAMIC VIEW: full width --- */
+            .dynamic-view {
+                grid-column: 1 !important;
+                grid-row: 3 !important;
+                border-right: none;
+                padding: 16px;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* --- DASHBOARD GRID --- */
+            .dash-grid {
+                grid-template-columns: 1fr 1fr !important;
+                gap: 10px;
+            }
+
+            .dash-row {
+                grid-template-columns: 1fr !important;
+                gap: 12px;
+            }
+            .dash-resize-handle {
+                display: none;
+            }
+
+            .stat-card .stat-value {
+                font-size: 22px;
+            }
+
+            /* --- CALENDAR: smaller cells --- */
+            .cal-day {
+                height: 64px;
+                padding: 4px;
+            }
+            .cal-day-num {
+                font-size: 11px;
+                width: 22px;
+                height: 22px;
+            }
+            .cal-event-pill {
+                font-size: 8px;
+                padding: 1px 3px;
+            }
+            .cal-month-label {
+                font-size: 16px;
+                min-width: auto;
+            }
+            .cal-header {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .cal-day-header {
+                padding: 6px 2px;
+                font-size: 9px;
+            }
+
+            /* --- IDEA PIPELINE (Kanban): horizontal scroll --- */
+            .idea-pipeline {
+                grid-template-columns: 1fr !important;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .idea-archived-grid {
+                grid-template-columns: 1fr !important;
+            }
+
+            /* --- CRM PIPELINE: horizontal scroll --- */
+            .crm-pipeline {
+                grid-template-columns: 1fr !important;
+            }
+
+            /* CRM Phonebook: simplify columns */
+            .crm-pb-header,
+            .crm-pb-row {
+                grid-template-columns: 1fr 80px !important;
+            }
+            .crm-pb-header > *:nth-child(n+3),
+            .crm-pb-row > *:nth-child(n+3) {
+                display: none;
+            }
+
+            /* --- DOCUMENTS GRID --- */
+            .doc-grid {
+                grid-template-columns: 1fr !important;
+            }
+
+            .doc-toolbar {
+                flex-wrap: wrap;
+            }
+
+            /* --- DOCUMENT VIEWER --- */
+            .doc-viewer-overlay {
+                padding: 0;
+            }
+            .doc-viewer {
+                border-radius: 0;
+                max-width: 100%;
+                min-height: 100%;
+            }
+            .doc-viewer-topbar {
+                border-radius: 0;
+                padding: 12px 16px;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .doc-viewer-hero {
+                padding: 20px 16px 12px;
+            }
+            .doc-viewer-title {
+                font-size: 22px;
+            }
+            .doc-viewer-body {
+                padding: 0 16px 24px;
+                font-size: 14px;
+            }
+
+            /* --- PLAYBOOK VIEWER --- */
+            .pb-viewer-overlay {
+                padding: 0;
+            }
+            .pb-viewer {
+                border-radius: 0;
+                max-width: 100%;
+                min-height: 100%;
+            }
+            .pb-viewer-topbar {
+                border-radius: 0;
+                padding: 12px 16px;
+                flex-wrap: wrap;
+            }
+            .pb-viewer-body {
+                padding: 16px;
+            }
+
+            /* --- MODALS: full screen --- */
+            .modal-overlay {
+                align-items: stretch;
+                padding: 0;
+            }
+            .modal {
+                width: 100% !important;
+                max-width: 100% !important;
+                max-height: 100% !important;
+                border-radius: 0 !important;
+                height: 100%;
+            }
+            .modal-header {
+                padding: 16px;
+            }
+            .modal-body {
+                padding: 16px;
+            }
+            .modal-footer {
+                padding: 16px;
+            }
+
+            /* --- SEARCH OVERLAY: full screen, bigger touch targets --- */
+            .search-overlay {
+                padding: 0;
+                align-items: stretch;
+            }
+            .search-container {
+                max-width: 100%;
+                border-radius: 0;
+                max-height: 100%;
+                height: 100%;
+            }
+            .search-input-wrap {
+                padding: 16px;
+            }
+            .search-input-wrap input {
+                font-size: 16px;
+            }
+            .search-result {
+                padding: 12px 16px;
+                min-height: 48px;
+            }
+            .search-result-icon {
+                width: 40px;
+                height: 40px;
+            }
+            .search-kbd {
+                display: none;
+            }
+
+            /* --- TOAST: center bottom, full width --- */
+            .toast {
+                left: 16px !important;
+                right: 16px !important;
+                bottom: 72px !important;
+                max-width: none;
+            }
+
+            /* --- TYPOGRAPHY & TOUCH TARGETS --- */
+            button, .btn-send, .btn-add, .btn-step, .btn-chat-action,
+            .quick-action, .nav-icon, .cal-nav-btn, .cal-today-btn,
+            .checklist-nav-btn, .checklist-today-btn, .crm-filter-pill,
+            .doc-folder-tab, .agent-tab, .crm-view-toggle button {
+                min-height: 44px;
+            }
+
+            .task-item {
+                padding: 12px;
+                min-height: 44px;
+            }
+            .task-check {
+                width: 20px !important;
+                height: 20px !important;
+                min-width: 20px !important;
+                max-width: 20px !important;
+            }
+            .task-check:checked::after {
+                top: 2px;
+                left: 6px;
+                width: 5px;
+                height: 9px;
+            }
+
+            .checklist-item {
+                min-height: 44px;
+                padding: 12px 14px;
+            }
+            .checklist-item .cl-check {
+                width: 20px !important;
+                height: 20px !important;
+                min-width: 20px !important;
+                max-width: 20px !important;
+            }
+            .checklist-item .cl-check:checked::after {
+                top: 2px;
+                left: 6px;
+                width: 5px;
+                height: 9px;
+            }
+
+            /* Scratch pad */
+            .scratch-input-bar {
+                padding: 10px 16px 14px;
+            }
+
+            /* Recurring tasks form */
+            .rec-form-row {
+                flex-wrap: wrap;
+            }
+            .rec-days {
+                min-width: 100%;
+            }
+            .rec-day-toggle {
+                height: 40px;
+            }
+
+            /* Designer wizard progress */
+            .designer-progress-line {
+                width: 30px;
+            }
+
+            /* Agent tabs: horizontal scroll */
+            .agent-tabs {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .agent-tabs::-webkit-scrollbar { display: none; }
+
+            /* Checklist week: ensure touch friendly */
+            .checklist-week-day {
+                padding: 12px 0 10px;
+            }
+
+            /* Make sure task delete is always visible on mobile (no hover) */
+            .task-delete {
+                opacity: 0.6 !important;
+            }
+            .scratch-action {
+                opacity: 0.6 !important;
+            }
+            .chat-history-item .delete-session {
+                opacity: 0.6 !important;
+            }
+            .rec-task-item .rec-task-actions {
+                opacity: 1 !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+
+            /* Even more compact on small phones */
+            .dash-grid {
+                grid-template-columns: 1fr !important;
+            }
+
+            .stat-card .stat-value {
+                font-size: 20px;
+            }
+            .stat-card {
+                padding: 14px;
+            }
+
+            .cal-day {
+                height: 52px;
+                padding: 2px;
+            }
+            .cal-day-num {
+                font-size: 10px;
+                width: 18px;
+                height: 18px;
+            }
+            .cal-event-pill {
+                display: none;
+            }
+            .cal-more {
+                display: none;
+            }
+            .cal-day-header {
+                font-size: 8px;
+                padding: 4px 1px;
+            }
+
+            .agenda-container {
+                max-height: 160px;
+                padding: 10px 12px;
+            }
+
+            .doc-viewer-title {
+                font-size: 18px;
+            }
+
+            .idea-quick-add {
+                flex-wrap: wrap;
+            }
+            .idea-quick-add input {
+                flex: 1 1 100%;
+            }
+
+            .checklist-week-day-name {
+                font-size: 9px;
+            }
+            .checklist-week-day-num {
+                font-size: 13px;
+            }
+
+            .crm-filter-bar {
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                -webkit-overflow-scrolling: touch;
+            }
+            .crm-filter-pill {
+                flex-shrink: 0;
+            }
+
+            /* Search results even larger targets */
+            .search-result {
+                padding: 14px 16px;
+                min-height: 52px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -2032,7 +2626,7 @@
 
     <div class="icon-rail">
         <div class="logo-container" id="logoToggle">
-            <img src="https://via.placeholder.com/32" id="appLogo" alt="AI CC">
+            L
         </div>
         <div class="nav-icons">
             <div class="nav-icon" id="btnWorkstations" title="Workstations"><i class="fa-solid fa-layer-group"></i></div>
@@ -2049,6 +2643,21 @@
         <div class="nav-icon" id="openSearch" title="Search (⌘K)"><i class="fa-solid fa-magnifying-glass"></i></div>
         <div class="nav-icon" id="openSettings" title="Settings" style="margin-top: auto;"><i class="fa-solid fa-gear"></i></div>
         <div class="nav-icon" id="btnLogout" title="Logout" onclick="logout()" style="margin-top: 4px; margin-bottom: 8px;"><i class="fa-solid fa-right-from-bracket"></i></div>
+        <div class="nav-icon" id="btnMobileMore" title="More" style="display:none;"><i class="fa-solid fa-ellipsis"></i></div>
+    </div>
+
+    <!-- Mobile more menu -->
+    <div class="mobile-more-menu" id="mobileMoreMenu">
+        <div class="mobile-more-item" onclick="mobileNavTo('playbooks')"><i class="fa-solid fa-book"></i>Playbooks</div>
+        <div class="mobile-more-item" onclick="mobileNavTo('logs')"><i class="fa-solid fa-scroll"></i>Work Log</div>
+        <div class="mobile-more-item" onclick="mobileNavTo('tools')"><i class="fa-solid fa-toolbox"></i>Tool Stack</div>
+        <div class="mobile-more-item" onclick="mobileNavTo('docs')"><i class="fa-solid fa-file-lines"></i>Documents</div>
+        <div class="mobile-more-item" onclick="mobileNavTo('crm')"><i class="fa-solid fa-address-book"></i>CRM</div>
+        <div class="mobile-more-item" onclick="mobileNavTo('radar')"><i class="fa-solid fa-satellite-dish"></i>Radar</div>
+        <div class="mobile-more-item" onclick="mobileNavTo('scratchpad')"><i class="fa-solid fa-terminal"></i>Scratch Pad</div>
+        <div class="mobile-more-item" onclick="openGlobalSearch();closeMobileMore()"><i class="fa-solid fa-magnifying-glass"></i>Search</div>
+        <div class="mobile-more-item" onclick="openModal('settingsModal');closeMobileMore()"><i class="fa-solid fa-gear"></i>Settings</div>
+        <div class="mobile-more-item" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i>Log Out</div>
     </div>
 
     <div class="sidebar collapsed" id="sidebar">
@@ -3146,6 +3755,11 @@
 
         // --- UTILS ---
         const $ = (id) => document.getElementById(id);
+        // Local date as YYYY-MM-DD (avoids UTC timezone shift)
+        const getLocalDateStr = (d) => {
+            const dt = d || new Date();
+            return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+        };
 
         const apiCall = async (path, opts = {}, _retried) => {
             const token = localStorage.getItem('cc_auth_token');
@@ -3244,6 +3858,49 @@
             }
         }
 
+        // --- MOBILE NAV ---
+        function toggleMobileMore() {
+            $('mobileMoreMenu').classList.toggle('open');
+        }
+        function closeMobileMore() {
+            $('mobileMoreMenu').classList.remove('open');
+        }
+        function mobileNavTo(view) {
+            closeMobileMore();
+            state.view = view;
+            localStorage.setItem('cc_current_view', view);
+            document.querySelector('.nav-icon.active')?.classList.remove('active');
+            const icon = document.querySelector(`[data-view="${view}"]`);
+            if (icon) icon.classList.add('active');
+            const dv = $('dynamicView');
+            dv.classList.remove('view-enter');
+            dv.innerHTML = '';
+            void dv.offsetHeight;
+            dv.classList.add('view-enter');
+            const agenda = document.querySelector('.agenda-container');
+            const main = $('mainContent');
+            const hideAgenda = ['docs','calendar','ideas','crm','radar','scratchpad'].includes(view);
+            if (hideAgenda) {
+                agenda.style.display = 'none';
+                $('agendaResizeHandle').style.display = 'none';
+                main.style.gridTemplateRows = '0px auto 1fr';
+            } else {
+                agenda.style.display = '';
+                $('agendaResizeHandle').style.display = '';
+                main.style.gridTemplateRows = 'var(--agenda-height, 300px) auto 1fr';
+            }
+            if (view === 'dashboard') renderDashboard();
+            if (view === 'playbooks') renderPlaybooks();
+            if (view === 'logs') renderLogs();
+            if (view === 'tools') renderTools();
+            if (view === 'docs') renderDocs();
+            if (view === 'calendar') loadCalendarEvents();
+            if (view === 'ideas') renderIdeas();
+            if (view === 'crm') renderCRM();
+            if (view === 'radar') renderRadar();
+            if (view === 'scratchpad') renderScratchPad();
+        }
+
         function logout() {
             const token = localStorage.getItem('cc_auth_token');
             if (token) {
@@ -3320,7 +3977,7 @@
 
             try {
                 const safeGet = (path) => api.get(path).catch((e) => { if (e.message === 'Session expired') throw e; return []; });
-                const todayDate = new Date().toISOString().split('T')[0];
+                const todayDate = getLocalDateStr();
                 const [companies, playbooks, tasks, logs, chat, tools, docs, chatSessions, events, ideas, contacts, recurringTasks, recurringCompletions, radarUpdates, radarPrompts, scratches] = await Promise.all([
                     safeGet('/api/companies'),
                     safeGet('/api/playbooks'),
@@ -3414,7 +4071,7 @@
             list.innerHTML = html;
 
             const todayDowSb = new Date().getDay();
-            const todayDateSb = new Date().toISOString().split('T')[0];
+            const todayDateSb = getLocalDateStr();
             const todayRecurringSb = state.recurringTasks.filter(rt => rt.days && rt.days.includes(todayDowSb));
             const recurringDoneSb = todayRecurringSb.filter(rt => state.recurringCompletions.some(c => c.recurring_task_id === rt.id && c.date === todayDateSb)).length;
             const totalTasks = state.tasks.length + todayRecurringSb.length;
@@ -3474,9 +4131,9 @@
             for (let i = 0; i < 7; i++) {
                 const d = new Date(monday);
                 d.setDate(monday.getDate() + i);
-                const dateStr = d.toISOString().split('T')[0];
-                const todayStr = today.toISOString().split('T')[0];
-                const targetStr = target.toISOString().split('T')[0];
+                const dateStr = getLocalDateStr(d);
+                const todayStr = getLocalDateStr(today);
+                const targetStr = getLocalDateStr(target);
                 const dayDow = d.getDay();
                 const hasRecurring = state.recurringTasks.some(rt => rt.days && rt.days.includes(dayDow));
                 days.push({ date: d, dateStr, dayLabel: dayNames[i], dayNum: d.getDate(), isToday: dateStr === todayStr, isSelected: dateStr === targetStr, isPast: d < today, hasRecurring });
@@ -3506,7 +4163,7 @@
 
         // Load completions for a non-today date (today's are loaded at startup)
         const ensureCompletionsForDate = async (dateStr) => {
-            const todayStr = new Date().toISOString().split('T')[0];
+            const todayStr = getLocalDateStr();
             if (dateStr === todayStr) return; // already loaded
             if (state._loadedCompletionDates && state._loadedCompletionDates.has(dateStr)) return;
             try {
@@ -3522,8 +4179,8 @@
         const buildPlannerHTML = () => {
             const target = getPlannerDate();
             const today = new Date(); today.setHours(0,0,0,0);
-            const dateStr = target.toISOString().split('T')[0];
-            const todayStr = today.toISOString().split('T')[0];
+            const dateStr = getLocalDateStr(target);
+            const todayStr = getLocalDateStr(today);
             const isToday = dateStr === todayStr;
             const dayName = target.toLocaleDateString('en', { weekday: 'long' });
             const monthDay = target.toLocaleDateString('en', { month: 'short', day: 'numeric' });
@@ -3588,8 +4245,8 @@
                         <div class="dash-section-title" style="margin-bottom:0;"><i class="fa-solid fa-list-check" style="color: var(--accent);"></i> Daily Checklist</div>
                         <div class="checklist-nav">
                             ${!isToday ? `<button class="checklist-today-btn" onclick="state.plannerWeekOffset=0;renderDashboard()">Today</button>` : ''}
-                            <button class="checklist-nav-btn" onclick="state.plannerWeekOffset--;ensureCompletionsForDate(getPlannerDate().toISOString().split('T')[0]).then(()=>renderDashboard())"><i class="fa-solid fa-chevron-left"></i></button>
-                            <button class="checklist-nav-btn" onclick="state.plannerWeekOffset++;ensureCompletionsForDate(getPlannerDate().toISOString().split('T')[0]).then(()=>renderDashboard())"><i class="fa-solid fa-chevron-right"></i></button>
+                            <button class="checklist-nav-btn" onclick="state.plannerWeekOffset--;ensureCompletionsForDate(getLocalDateStr(getPlannerDate())).then(()=>renderDashboard())"><i class="fa-solid fa-chevron-left"></i></button>
+                            <button class="checklist-nav-btn" onclick="state.plannerWeekOffset++;ensureCompletionsForDate(getLocalDateStr(getPlannerDate())).then(()=>renderDashboard())"><i class="fa-solid fa-chevron-right"></i></button>
                         </div>
                     </div>
 
@@ -3649,7 +4306,7 @@
                         <div class="dash-section">
                             <div class="dash-section-title"><i class="fa-solid fa-calendar-day" style="color: #EC4899;"></i> Today's Schedule</div>
                             ${(() => {
-                                const todayEvents = state.events.filter(e => e.date === new Date().toISOString().split('T')[0])
+                                const todayEvents = state.events.filter(e => e.date === getLocalDateStr())
                                     .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
                                 if (todayEvents.length === 0) return '<div style="color: var(--text-dim); font-size: 14px; padding: 8px 0;">Nothing scheduled today.</div>';
                                 return todayEvents.map(e => {
@@ -4874,7 +5531,7 @@
                 state.editingEvent = null;
                 state.editingEventColor = '#6366F1';
                 $('eventTitleInput').value = '';
-                $('eventDateInput').value = prefillDate || state.calSelectedDate || new Date().toISOString().split('T')[0];
+                $('eventDateInput').value = prefillDate || state.calSelectedDate || getLocalDateStr();
                 $('eventTimeInput').value = '';
                 $('eventEndTimeInput').value = '';
                 $('eventCompanyInput').value = state.selectedCompany !== 'All workstations' ? state.selectedCompany : '';
@@ -5729,7 +6386,7 @@
 
             // Get today's recurring tasks
             const todayDow = new Date().getDay();
-            const todayDate = new Date().toISOString().split('T')[0];
+            const todayDate = getLocalDateStr();
             const todayRecurring = state.recurringTasks.filter(rt => rt.days && rt.days.includes(todayDow)).map(rt => {
                 const completion = state.recurringCompletions.find(c => c.recurring_task_id === rt.id && c.date === todayDate);
                 return { ...rt, done: !!completion, completionId: completion ? completion.id : null, isRecurring: true };
@@ -5817,6 +6474,7 @@
                 state.logs.push(log);
                 renderAgenda();
                 renderIdeas();
+                renderDashboard();
                 showToast('Idea completed');
             } catch (err) {
                 showToast('Failed to complete idea');
@@ -5978,7 +6636,7 @@
             }
             renderAgenda();
             renderSidebar();
-            if (state.view === 'dashboard') renderDashboard();
+            renderDashboard();
         };
 
         const deleteTask = async (id) => {
@@ -5986,34 +6644,20 @@
             state.tasks = state.tasks.filter(t => t.id !== id);
             renderAgenda();
             renderSidebar();
+            renderDashboard();
         };
 
         const toggleRecurringTask = async (id) => {
-            const todayDate = new Date().toISOString().split('T')[0];
-            const completion = state.recurringCompletions.find(c => c.recurring_task_id === id && c.date === todayDate);
-            if (completion) {
-                await api.del(`/api/recurring-completions/${completion.id}`);
-                state.recurringCompletions = state.recurringCompletions.filter(c => c.id !== completion.id);
-            } else {
-                const rt = state.recurringTasks.find(t => t.id === id);
-                const newCompletion = await api.post('/api/recurring-completions', { recurring_task_id: id, date: todayDate });
-                state.recurringCompletions.push(newCompletion);
-                if (rt) {
-                    const timestamp = Date.now();
-                    const log = await api.post('/api/logs', { content: `Recurring task completed: ${rt.text} (${rt.company})`, timestamp, agent: 'system' });
-                    state.logs.push(log);
-                }
-            }
-            renderAgenda();
-            renderSidebar();
-            if (state.view === 'dashboard') renderDashboard();
+            // Delegate to plannerToggleRecurring with today's date — single code path
+            const todayDate = getLocalDateStr();
+            await plannerToggleRecurring(id, todayDate);
         };
 
         const logMissedRecurringTasks = async () => {
             try {
                 const yesterday = new Date();
                 yesterday.setDate(yesterday.getDate() - 1);
-                const yesterdayDate = yesterday.toISOString().split('T')[0];
+                const yesterdayDate = getLocalDateStr(yesterday);
                 const yesterdayDow = yesterday.getDay();
                 const scheduledYesterday = state.recurringTasks.filter(rt => rt.days && rt.days.includes(yesterdayDow));
                 if (!scheduledYesterday.length) return;
@@ -7726,11 +8370,22 @@
                 $('sidebar').classList.toggle('collapsed');
             };
 
-            // Close sidebar when clicking outside
+            // Mobile more button
+            $('btnMobileMore').onclick = (e) => {
+                e.stopPropagation();
+                toggleMobileMore();
+            };
+
+            // Close sidebar and mobile menu when clicking outside
             document.addEventListener('click', (e) => {
                 const sidebar = $('sidebar');
                 if (!sidebar.classList.contains('collapsed') && !sidebar.contains(e.target) && e.target.id !== 'btnWorkstations' && !$('btnWorkstations').contains(e.target)) {
                     sidebar.classList.add('collapsed');
+                }
+                // Close mobile more menu on outside click
+                const moreMenu = $('mobileMoreMenu');
+                if (moreMenu.classList.contains('open') && !moreMenu.contains(e.target) && e.target.id !== 'btnMobileMore' && !$('btnMobileMore').contains(e.target)) {
+                    closeMobileMore();
                 }
             });
 
@@ -7882,7 +8537,7 @@
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `sexyai-backup-${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `sexyai-backup-${getLocalDateStr()}.json`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
@@ -7960,8 +8615,7 @@
 
             $('btnAddCompany').onclick = () => openWorkstationEditor();
 
-            const logoPath = "logo.png";
-            $('appLogo').src = logoPath;
+            // Logo is a CSS gradient square with "L" — no image needed
         }
 
         function applyFontSize(size) {
@@ -8008,7 +8662,9 @@
                     bootApp();
                 } catch (e) {
                     // Token invalid - clear it and show login
+                    console.warn('[Auth] Session restore failed:', e.message);
                     localStorage.removeItem('cc_auth_token');
+                    localStorage.removeItem('cc_refresh_token');
                     $('authScreen').style.display = 'flex';
                     // Dismiss loader
                     const loader = $('appLoader');
