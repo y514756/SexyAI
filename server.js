@@ -1077,17 +1077,18 @@ app.post('/api/radar/industry', async (req, res) => {
   if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured on server' });
 
   try {
-    // Fetch recent reports to avoid repetition
+    // Fetch recent reports to avoid repetition (limit to last 2 reports, max 8 headlines)
     const { data: recentReports } = await supabase
       .from('industry_reports')
       .select('radar_blips')
       .order('created_at', { ascending: false })
-      .limit(3);
+      .limit(2);
     const previousHeadlines = (recentReports || [])
-      .flatMap(r => (r.radar_blips || []).map(b => b.headline || b.entity))
-      .filter(Boolean);
-    const exclusionBlock = previousHeadlines.length > 0
-      ? `\n\nIMPORTANT: Do NOT repeat these stories that were already covered in recent reports:\n${previousHeadlines.map(h => '- ' + h).join('\n')}\n\nFind DIFFERENT stories, angles, or developments.`
+      .flatMap(r => (r.radar_blips || []).map(b => b.entity))
+      .filter(Boolean)
+      .slice(0, 8);
+    const dedupList = previousHeadlines.length > 0
+      ? `\n\nDedup / exclusion rules:\nAvoid repeating any entities, companies, stories, or topics already covered in prior runs.\nExcluded entities/topics: ${previousHeadlines.join(', ')}`
       : '';
 
     // --- PASS 1: SEARCH GROUNDING (real-time industry intel) ---
@@ -1097,15 +1098,46 @@ app.post('/api/radar/industry', async (req, res) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: `Search for news from the last 7 days about:
-1. Competitor activity: Grindr, Sniffies, Lex, Archer, DICE, Partiful — any product launches, funding, controversies, feature updates
-2. AI integration in dating and social apps — new AI features, chatbots, matching algorithms, safety tools
-3. Gay nightlife industry shifts — major venue openings/closings, cultural trends, circuit party news, Pride planning
-4. Nightlife tech trends relevant to a queer nightlife + AI dating app (Gen Z socializing patterns, geospatial discovery, safety tech)
+          contents: [{ role: 'user', parts: [{ text: `Find the most relevant recent news and developments from the last 30 days that would matter to a gay nightlife and social discovery app like LOKKR.
 
-Return the top 3-5 most significant stories with headlines, key entities involved, brief summaries, and source URLs. Be specific and factual.${exclusionBlock}` }] }],
+Important:
+This is a RAW INTEL pass, not the strategy pass.
+Do NOT do deep strategic analysis yet.
+Do NOT collapse multiple stories into one.
+Do NOT invent or alter URLs.
+Do NOT return generic trend summaries without a specific news hook.
+
+Goal:
+Return exactly 6 distinct stories if possible.
+If only 5 are truly newsworthy, return 5.
+Do not return more than 7.
+
+Coverage requirements:
+Cover as many different categories as possible.
+Aim to cover at least 4 of these 5 categories, with no more than 2 stories from the same category:
+
+1. COMPETITOR ACTIVITY — Gay/queer dating apps, social apps, nightlife platforms, queer community apps: product launches, partnerships, funding, leadership changes, controversies, feature updates, platform shifts
+2. DATING / SOCIAL APP INDUSTRY — AI in dating/social apps, new matching mechanics, trust & safety features, Gen Z behavior shifts, creator/social monetization, location-based social behavior, new product patterns in consumer social apps
+3. NIGHTLIFE INDUSTRY — Venue openings/closings, nightlife platforms, ticketing/event-tech, circuit party news, Pride-related planning, nightlife regulation, nightlife media developments
+4. LGBTQ+ CULTURE & COMMUNITY — Policy or legal changes affecting queer spaces, queer media/platform launches, advocacy tech, major cultural moments affecting LGBTQ+ nightlife or connection
+5. ADJACENT TECH — Geospatial discovery, map-based apps, real-time social features, event discovery platforms, AI moderation, trust & safety infrastructure, identity/privacy innovations relevant to social apps
+
+Selection rules:
+- Prioritize genuinely newsworthy developments over routine updates
+- Prioritize developments with clear product, behavioral, regulatory, cultural, or market relevance
+- Prefer the most recent and most material stories
+- Avoid duplicate entities, duplicate angles, and near-identical stories
+- Each story must focus on a DIFFERENT entity or clearly different development
+- If two stories concern the same company, only include both if they are meaningfully different and highly material
+- Prefer reported developments over vague marketing announcements unless the announcement is materially important
+
+Freshness rules:
+- Search last 30 days, strongly prioritize the last 14 days when possible
+- Include the publication date if available
+
+For each story return: category, headline, primary entity, secondary entities, published date, summary (2-4 sentences, factual, no strategy language), source name, source URL. Be specific and factual.${dedupList}` }] }],
           tools: [{ google_search: {} }],
-          generationConfig: { temperature: 0.85, topP: 0.95, topK: 40 }
+          generationConfig: { temperature: 0.9, topP: 0.95, topK: 40 }
         })
       }
     );
@@ -1134,8 +1166,27 @@ Return the top 3-5 most significant stories with headlines, key entities involve
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: 'You are the LOKKR Industry Intel Radar — strategic intelligence for a queer nightlife + AI dating app founder. Sharp, concise, no fluff. You analyze competitor moves, industry trends, and market signals. You MUST use the exact source URLs provided — do not make up URLs.' }] },
-          contents: [{ role: 'user', parts: [{ text: `Format this raw industry intel into a structured LOKKR Industry Intelligence report. Assign impact scores based on how directly this affects a queer nightlife + AI dating startup. Each blip MUST include a real source URL from the list below:\n\n${rawIntel}${sourcesBlock}` }] }],
+          systemInstruction: { parts: [{ text: LOKKR_SYSTEM_INSTRUCTION + `\n\nYou are the LOKKR Industry Intel Radar. Transform grounded market news into a structured LOKKR Industry Intelligence report. Analyze through the lens of LOKKR's three pillars (social discovery, nightlife intelligence, cultural media). Use the "know the room" filter: Does this development affect how users discover people, understand nightlife context, navigate real spaces, assess social energy, trust platforms, or stay culturally connected? Be sharp, concise, strategic. No fluff. Do not invent facts or URLs.` }] },
+          contents: [{ role: 'user', parts: [{ text: `Format the raw grounded intel below into a structured LOKKR Industry Intelligence report.
+
+Critical conversion rules:
+1. You MUST include every story from the raw intel — convert each into exactly one radar_blip
+2. Do not merge stories. Do not drop stories. Do not create extra stories.
+3. Each blip url must be a real URL from the source list below
+4. Do not rewrite a story into a different news event
+5. Do not generalize a specific story into a broad trend blip
+
+Scoring rules:
+- impact_score: 1-10 (1-3 = weak relevance, 4-6 = meaningful, 7-8 = strong, 9-10 = major direct relevance to core pillars)
+- global_impact_score: 1-10 for the entire batch
+
+Status must be one of: watch, important, urgent, opportunity, threat
+
+strategic_value must: explain why this matters for LOKKR specifically, connect to at least one pillar, mention "know the room" when relevant, stay concise (2-4 sentences max), not mechanically repeat the summary
+
+insider_take must: synthesize the whole batch into a single strategic read, identify the most important pattern, say what LOKKR should pay attention to, stay under 140 words
+
+RAW INTEL:\n\n${rawIntel}${sourcesBlock}` }] }],
           generationConfig: {
             temperature: 0.7,
             topP: 0.95,
@@ -1144,25 +1195,25 @@ Return the top 3-5 most significant stories with headlines, key entities involve
             responseSchema: {
               type: 'OBJECT',
               properties: {
-                sector: { type: 'STRING', description: 'Primary sector covered (e.g. Queer Nightlife + Dating Tech)' },
-                global_impact_score: { type: 'INTEGER', description: 'Overall market impact 0-100 for LOKKR strategy' },
-                market_label: { type: 'STRING', description: '2-word market status label (e.g. SHIFTING FAST, STEADY GROWTH, HIGH ALERT)' },
+                sector: { type: 'STRING', description: 'Primary sector label for this batch' },
+                global_impact_score: { type: 'INTEGER', description: 'Overall batch impact 1-10 for LOKKR strategy' },
+                market_label: { type: 'STRING', description: 'Short phrase summarizing the dominant pattern (e.g. AI dating acceleration, nightlife infrastructure shift, queer platform volatility)' },
                 radar_blips: {
                   type: 'ARRAY',
                   items: {
                     type: 'OBJECT',
                     properties: {
-                      entity: { type: 'STRING', description: 'Company or trend name' },
-                      impact_score: { type: 'INTEGER', description: '0-100 impact on LOKKR strategy' },
-                      status: { type: 'STRING', description: 'Short status tag (e.g. AI ROLLOUT, FUNDING, CLOSING, EXPANSION, CONTROVERSY, TREND)' },
-                      headline: { type: 'STRING', description: 'One-line headline summary' },
-                      strategic_value: { type: 'STRING', description: 'One sentence: why this matters for LOKKR specifically — product, positioning, or competitive edge.' },
-                      url: { type: 'STRING', description: 'Source article URL' }
+                      entity: { type: 'STRING', description: 'Primary company, platform, event, or organization' },
+                      impact_score: { type: 'INTEGER', description: '1-10 impact on LOKKR strategy' },
+                      status: { type: 'STRING', description: 'One of: watch, important, urgent, opportunity, threat' },
+                      headline: { type: 'STRING', description: 'One-line headline' },
+                      strategic_value: { type: 'STRING', description: 'Why this matters for LOKKR — connect to pillars and know-the-room filter. 2-4 sentences.' },
+                      url: { type: 'STRING', description: 'Source article URL from grounding' }
                     },
                     required: ['entity', 'impact_score', 'status', 'headline', 'strategic_value', 'url']
                   }
                 },
-                insider_take: { type: 'STRING', description: '2-3 sentences of strategic analysis for LOKKR founder. What does this mean for product/positioning? Confident, opinionated, actionable.' }
+                insider_take: { type: 'STRING', description: 'Strategic synthesis of the whole batch. Pattern identification, what LOKKR should pay attention to. Under 140 words.' }
               },
               required: ['sector', 'global_impact_score', 'market_label', 'radar_blips', 'insider_take']
             }
