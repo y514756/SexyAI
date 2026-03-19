@@ -5072,7 +5072,7 @@
                     <div style="color: var(--text-dim); font-size: 14px; padding: 8px 0;">No radar reports yet. <span style="color: var(--accent); cursor: pointer;" onclick="state.view='radar'; state.radarTab='report'; localStorage.setItem('cc_current_view','radar'); document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=radar]')?.classList.add('active'); const ag=document.querySelector('.agenda-container'); ag.style.display='none'; $('mainContent').style.gridTemplateRows='0px auto 1fr'; renderRadar();">Run a scan from the Radar page.</span></div>
                 </div>`;
             }
-            const age = Date.now() - new Date(report.created_at).getTime();
+            const age = report.created_at ? Date.now() - new Date(report.created_at).getTime() : 0;
             const dotColor = age < 6*60*60*1000 ? '#10B981' : age < 24*60*60*1000 ? '#F59E0B' : '#6B7280';
             const signalLabel = age < 6*60*60*1000 ? 'High' : age < 24*60*60*1000 ? 'Medium' : 'Stale';
             const ageMin = Math.floor(age / 60000);
@@ -5137,7 +5137,7 @@
                     </button>
                 </div>`;
             }
-            const age = Date.now() - new Date(report.created_at).getTime();
+            const age = report.created_at ? Date.now() - new Date(report.created_at).getTime() : 0;
             const ageMin = Math.floor(age / 60000);
             const freshness = ageMin < 60 ? ageMin + 'm ago' : ageMin < 1440 ? Math.floor(ageMin/60) + 'h ago' : Math.floor(ageMin/1440) + 'd ago';
             const blips = report.radar_blips || [];
@@ -9376,8 +9376,8 @@
                         <p style="font-size: 13px; margin-top: 8px;">Generate a report to scan competitor activity, AI trends, and nightlife shifts.</p>
                     </div>
                 ` : reports.map(r => {
-                    const date = new Date(r.created_at);
-                    const timeStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                    const date = r.created_at ? new Date(r.created_at) : null;
+                    const timeStr = date && !isNaN(date) ? date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '';
                     const blips = r.radar_blips || [];
                     const score = r.global_impact_score || 0;
                     const gaugeColor = score >= 80 ? '#EF4444' : score >= 60 ? '#F59E0B' : '#22d3ee';
@@ -9513,8 +9513,8 @@
                         <p style="font-size: 13px; margin-top: 8px;">Generate a report to synthesize competitor intel into actionable feature pivots.</p>
                     </div>
                 ` : reports.map(r => {
-                    const date = new Date(r.created_at);
-                    const timeStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                    const date = r.created_at ? new Date(r.created_at) : null;
+                    const timeStr = date && !isNaN(date) ? date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '';
                     const ideas = r.sandbox_ideas || [];
                     return `
                         <div class="sandbox-report-card">
