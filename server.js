@@ -48,6 +48,7 @@ app.use(helmet({
 app.use('/auth/login', rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { error: 'Too many login attempts, try again in 15 minutes' } }));
 app.use('/api/chat/gemini', rateLimit({ windowMs: 60 * 1000, max: 10, message: { error: 'Rate limit exceeded' } }));
 app.use('/api/radar/scan', rateLimit({ windowMs: 60 * 1000, max: 5, message: { error: 'Rate limit exceeded' } }));
+app.use('/api/radar/report', rateLimit({ windowMs: 60 * 1000, max: 5, message: { error: 'Rate limit exceeded' } }));
 app.use('/api', rateLimit({ windowMs: 60 * 1000, max: 200, message: { error: 'Rate limit exceeded' } }));
 
 app.use(express.json({ limit: '10mb' }));
@@ -394,7 +395,7 @@ app.get('/api/backup', async (req, res) => {
       'companies', 'playbooks', 'tasks', 'logs', 'chat_messages',
       'chat_sessions', 'tools', 'calendar_events', 'documents',
       'ideas', 'contacts', 'recurring_tasks', 'recurring_completions',
-      'radar_updates', 'radar_prompts', 'scratches'
+      'radar_updates', 'radar_prompts', 'radar_reports', 'scratches'
     ];
     const results = await Promise.all(
       tables.map(t => supabase.from(t).select('*').then(r => [t, r.data || []]))
@@ -425,6 +426,7 @@ app.post('/api/migrate', async (req, res) => {
     recurring_completions: 'recurring_completions',
     radar_updates: 'radar_updates',
     radar_prompts: 'radar_prompts',
+    radar_reports: 'radar_reports',
     scratches: 'scratches'
   };
   try {
@@ -556,10 +558,105 @@ app.post('/api/docs', async (req, res) => {
 
 app.patch('/api/docs/:id', async (req, res) => {
   const { title, content, folder, tags, pinned, company } = req.body;
+
+  // Snapshot current version before updating (skip for pin-only changes)
+  const isContentChange = title !== undefined || content !== undefined || folder !== undefined || tags !== undefined || company !== undefined;
+  if (isContentChange) {
+    try {
+      const { data: current } = await supabase.from('documents').select('*').eq('id', req.params.id).single();
+      if (current) {
+        const { data: maxVer } = await supabase.from('document_versions').select('version_number').eq('document_id', req.params.id).order('version_number', { ascending: false }).limit(1).maybeSingle();
+        const nextVersion = (maxVer?.version_number || 0) + 1;
+        await supabase.from('document_versions').insert({
+          document_id: req.params.id,
+          title: current.title,
+          content: current.content || '',
+          folder: current.folder,
+          tags: current.tags || [],
+          company: current.company,
+          version_number: nextVersion
+        });
+      }
+    } catch (e) {
+      console.warn('[Docs] Version snapshot failed:', e.message);
+    }
+  }
+
   const updates = { ...Object.fromEntries(Object.entries({ title, content, folder, tags, pinned, company }).filter(([, v]) => v !== undefined)), updated_at: new Date().toISOString() };
   const { data, error } = await supabase
     .from('documents')
     .update(updates)
+    .eq('id', req.params.id)
+    .select()
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+// --- DOCUMENT VERSIONS ---
+app.get('/api/docs/:id/versions', async (req, res) => {
+  const { data, error } = await supabase
+    .from('document_versions')
+    .select('id, document_id, title, content, version_number, created_at')
+    .eq('document_id', req.params.id)
+    .order('version_number', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  // Add content preview
+  const versions = (data || []).map(v => ({
+    ...v,
+    content_preview: (v.content || '').replace(/<[^>]*>/g, '').substring(0, 100)
+  }));
+  res.json(versions);
+});
+
+app.get('/api/docs/:id/versions/:versionId', async (req, res) => {
+  const { data, error } = await supabase
+    .from('document_versions')
+    .select('*')
+    .eq('id', req.params.versionId)
+    .eq('document_id', req.params.id)
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.post('/api/docs/:id/versions/:versionId/restore', async (req, res) => {
+  // Fetch the version to restore
+  const { data: version, error: vErr } = await supabase
+    .from('document_versions')
+    .select('*')
+    .eq('id', req.params.versionId)
+    .eq('document_id', req.params.id)
+    .single();
+  if (vErr || !version) return res.status(404).json({ error: 'Version not found' });
+
+  // Snapshot current state before restoring (so restore is reversible)
+  const { data: current } = await supabase.from('documents').select('*').eq('id', req.params.id).single();
+  if (current) {
+    const { data: maxVer } = await supabase.from('document_versions').select('version_number').eq('document_id', req.params.id).order('version_number', { ascending: false }).limit(1).maybeSingle();
+    const nextVersion = (maxVer?.version_number || 0) + 1;
+    await supabase.from('document_versions').insert({
+      document_id: req.params.id,
+      title: current.title,
+      content: current.content || '',
+      folder: current.folder,
+      tags: current.tags || [],
+      company: current.company,
+      version_number: nextVersion
+    });
+  }
+
+  // Restore the version
+  const { data, error } = await supabase
+    .from('documents')
+    .update({
+      title: version.title,
+      content: version.content,
+      folder: version.folder,
+      tags: version.tags,
+      company: version.company,
+      updated_at: new Date().toISOString()
+    })
     .eq('id', req.params.id)
     .select()
     .single();
@@ -731,7 +828,7 @@ app.post('/api/chat/gemini', async (req, res) => {
             parts: [{ text: m.content }]
           })),
           tools: [{ googleSearch: {} }],
-          generationConfig: { temperature: 0.85, topP: 0.95, topK: 40, maxOutputTokens: 300, responseMimeType: 'text/plain' }
+          generationConfig: { temperature: 0.85, topP: 0.95, topK: 40, maxOutputTokens: 4096, responseMimeType: 'text/plain' }
         })
       }
     );
@@ -740,7 +837,11 @@ app.post('/api/chat/gemini', async (req, res) => {
       return res.status(response.status).json({ error: errText.substring(0, 500) });
     }
     const data = await response.json();
-    const text = data.candidates[0].content.parts[0].text;
+    const candidate = data.candidates[0];
+    const text = candidate.content.parts
+      .filter(p => p.text)
+      .map(p => p.text)
+      .join('');
     res.json({ text });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -835,6 +936,133 @@ app.post('/api/radar/scan', async (req, res) => {
 });
 
 // ─────────────────────────────────────────
+// RADAR REPORTS (Structured JSON reports)
+// ─────────────────────────────────────────
+app.post('/api/radar/report', async (req, res) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured on server' });
+
+  const { city = 'Toronto' } = req.body;
+
+  // Nightlife offset: before 4 AM counts as the previous day's night
+  const now = new Date();
+  const effectiveDate = new Date(now);
+  if (now.getHours() < 4) effectiveDate.setDate(effectiveDate.getDate() - 1);
+  const nightLabel = effectiveDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+  try {
+    // --- PASS 1: SEARCH GROUNDING (real-time intel) ---
+    const searchResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: `Search for live activity in ${city} gay and queer nightlife for tonight (${nightLabel} night). You MUST identify at least 5 specific venues. For each venue, look for: recent social media check-ins or posts, event listings, "sold out" notices, and local nightlife mentions from the last few hours. Provide a density summary for each — how packed does it seem based on the signals? Be thorough and specific.` }] }],
+          tools: [{ google_search: {} }],
+          generationConfig: { temperature: 0.85, topP: 0.95, topK: 40 }
+        })
+      }
+    );
+
+    if (!searchResponse.ok) {
+      const errText = await searchResponse.text();
+      return res.status(searchResponse.status).json({ error: errText.substring(0, 500) });
+    }
+
+    const searchData = await searchResponse.json();
+    const rawIntel = searchData.candidates[0].content.parts.filter(p => p.text).map(p => p.text).join('\n');
+
+    // --- PASS 2: FORMAT INTO STRUCTURED JSON ---
+    const formatResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: 'You are the LOKKR Radar — the queer nightlife dashboard that talks like a sharp, witty friend who actually goes out. Never corny, never try-hard. Write like a text from someone who just got back from the venue. Short, dry, knowing. No puns, no innuendo, no "foreplay" metaphors. Just real talk with attitude.' }] },
+          contents: [{ role: 'user', parts: [{ text: `Format this raw nightlife intel into a LOKKR radar report. You MUST include ALL venues mentioned — minimum 5 blips. Assign a busyness_score (0-100) for each venue AND an overall city score based on signal density: 0-20 = ghost town, 30-50 = steady flow, 60-80 = packed and moving, 90+ = wall-to-wall. If a venue has "sold out" signals, bump it to 90+. Keep the tone real, sharp, insider energy:\n\n${rawIntel}` }] }],
+          generationConfig: {
+            temperature: 0.85,
+            topP: 0.95,
+            topK: 40,
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: 'OBJECT',
+              properties: {
+                busyness_score: { type: 'INTEGER', description: 'Global city busyness 0-100. 0-20: ghost town. 50: steady flow. 90+: wall-to-wall.' },
+                vibe_label: { type: 'STRING', description: 'A high-energy 2-word label (e.g., STEADY SURGE, ELECTRIC CHAOS, VOLTAGE PEAK)' },
+                radar_blips: {
+                  type: 'ARRAY',
+                  items: {
+                    type: 'OBJECT',
+                    properties: {
+                      venue: { type: 'STRING' },
+                      venue_busyness: { type: 'INTEGER', description: '0-100 busyness for this specific spot. 0-20: dead. 50: chill flow. 90+: line out the door.' },
+                      status: { type: 'STRING', description: 'Short, punchy venue status (e.g., PEAK, DARK, SWEATY, BUILDING, PACKED, CRUISY, CHILL, WINDING DOWN)' },
+                      crowd_type: { type: 'STRING' }
+                    },
+                    required: ['venue', 'venue_busyness', 'status', 'crowd_type']
+                  }
+                },
+                insider_take: { type: 'STRING', description: '2-3 sentences of real insider analysis. Cover the overall energy, what is worth checking out and why, and what to skip. Confident, opinionated, specific. Like a nightlife columnist who actually goes out.' }
+              },
+              required: ['busyness_score', 'vibe_label', 'radar_blips', 'insider_take']
+            }
+          }
+        })
+      }
+    );
+
+    if (!formatResponse.ok) {
+      const errText = await formatResponse.text();
+      return res.status(formatResponse.status).json({ error: errText.substring(0, 500) });
+    }
+
+    const formatData = await formatResponse.json();
+    const text = formatData.candidates[0].content.parts.filter(p => p.text).map(p => p.text).join('');
+    const parsed = JSON.parse(text);
+
+    const { data, error } = await supabase
+      .from('radar_reports')
+      .insert({
+        city,
+        vibe_score: Math.max(0, Math.min(100, parsed.busyness_score)),
+        vibe_label: parsed.vibe_label,
+        radar_blips: parsed.radar_blips || [],
+        insider_take: parsed.insider_take
+      })
+      .select()
+      .single();
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/radar/reports', async (req, res) => {
+  const { data, error } = await supabase
+    .from('radar_reports')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+app.get('/api/radar/reports/latest', async (req, res) => {
+  const { data, error } = await supabase
+    .from('radar_reports')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+// ─────────────────────────────────────────
 // SCRATCHES (Scratch Pad)
 // ─────────────────────────────────────────
 app.get('/api/scratches', async (req, res) => {
@@ -893,6 +1121,7 @@ app.delete('/api/reset', async (req, res) => {
     await supabase.from('recurring_completions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     await supabase.from('recurring_tasks').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     await supabase.from('radar_updates').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('radar_reports').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     await supabase.from('scratches').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     res.json({ ok: true });
   } catch (err) {

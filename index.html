@@ -276,6 +276,7 @@
         }
         .chat-reopen-btn:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(99, 102, 241, 0.5); }
         .main-content.chat-closed ~ .chat-reopen-btn { display: flex; }
+        body[data-current-view="docs"] .chat-reopen-btn { display: none !important; }
 
         .chat-header {
             padding: 16px 24px;
@@ -901,6 +902,217 @@
             opacity: 0.6;
         }
 
+        /* Radar Widget & Report Styles — Cyberpunk HUD */
+
+        /* --- Keyframes --- */
+        @keyframes radarPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.3; transform: scale(0.8); }
+        }
+        @keyframes radarSweep {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(200%); }
+        }
+        @keyframes radarGlow {
+            0%, 100% { box-shadow: 0 0 4px rgba(147, 51, 234, 0.3), 0 0 8px rgba(236, 72, 153, 0.15); }
+            50% { box-shadow: 0 0 8px rgba(147, 51, 234, 0.5), 0 0 16px rgba(236, 72, 153, 0.25); }
+        }
+        @keyframes radarScanLine {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 0% 100%; }
+        }
+        @keyframes vibeBarLoad {
+            0% { width: 0%; }
+        }
+        @keyframes vibeShimmer {
+            0% { left: -40%; }
+            100% { left: 140%; }
+        }
+        @keyframes blipPing {
+            0% { box-shadow: 0 0 0 0 rgba(147, 51, 234, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(147, 51, 234, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(147, 51, 234, 0); }
+        }
+        @keyframes borderPulse {
+            0%, 100% { border-color: rgba(147, 51, 234, 0.2); }
+            50% { border-color: rgba(147, 51, 234, 0.45); }
+        }
+
+        /* --- Pulse Dot --- */
+        .radar-pulse-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            animation: radarPulse 2s ease-in-out infinite;
+            flex-shrink: 0;
+            box-shadow: 0 0 6px currentColor, 0 0 12px currentColor;
+        }
+
+        /* --- Widget Header --- */
+        .radar-widget-header {
+            display: flex; align-items: center; gap: 8px;
+            position: relative;
+        }
+
+        /* --- Busyness Gauge --- */
+        .radar-busyness-gauge {
+            position: relative; display: inline-flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .radar-gauge-score {
+            position: absolute; font-size: 16px; font-weight: 800; color: var(--text-primary);
+            text-shadow: 0 0 8px rgba(147, 51, 234, 0.3);
+        }
+
+        /* --- Vibe Bar --- */
+        .radar-vibe-bar {
+            width: 100%; height: 6px; border-radius: 3px;
+            background: rgba(42, 42, 56, 0.6); overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+        }
+        .radar-vibe-fill {
+            height: 100%; border-radius: 3px;
+            background: linear-gradient(90deg, #7c3aed, #9333ea, #c026d3, #ec4899);
+            background-size: 200% 100%;
+            transition: width 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+            animation: vibeBarLoad 1s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+            position: relative;
+            box-shadow: 0 0 8px rgba(147, 51, 234, 0.5), 0 0 16px rgba(236, 72, 153, 0.2);
+        }
+        .radar-vibe-fill::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -40%;
+            width: 40%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+            animation: vibeShimmer 2.5s ease-in-out infinite;
+            animation-delay: 1s;
+        }
+
+        /* --- Blip Pills --- */
+        .radar-blip-pill {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;
+            letter-spacing: 0.3px; text-transform: uppercase;
+            border: 1px solid rgba(147, 51, 234, 0.3);
+            color: var(--text-primary);
+            background: linear-gradient(135deg, rgba(147, 51, 234, 0.08), rgba(236, 72, 153, 0.05));
+            transition: all 0.25s ease;
+            position: relative;
+            cursor: default;
+        }
+        .radar-blip-pill::before {
+            content: '';
+            width: 5px; height: 5px; border-radius: 50%;
+            background: #9333ea;
+            box-shadow: 0 0 4px #9333ea, 0 0 8px rgba(147, 51, 234, 0.4);
+            animation: radarPulse 2.5s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+        .radar-blip-pill:hover {
+            border-color: rgba(147, 51, 234, 0.6);
+            box-shadow: 0 0 12px rgba(147, 51, 234, 0.35), 0 0 24px rgba(236, 72, 153, 0.15);
+            background: linear-gradient(135deg, rgba(147, 51, 234, 0.15), rgba(236, 72, 153, 0.1));
+            transform: translateY(-1px);
+        }
+
+        /* --- Blip Stack (Vertical Glow-Bar) --- */
+        .radar-blip-stack {
+            display: flex; flex-direction: column; gap: 6px;
+            margin-bottom: 10px; padding-left: 2px;
+        }
+        .radar-blip-row {
+            display: flex; align-items: center; gap: 12px;
+            padding: 8px 10px;
+            transition: all 0.25s ease;
+            border-radius: 8px;
+            position: relative;
+        }
+        .radar-blip-row:hover {
+            background: rgba(147, 51, 234, 0.06);
+        }
+        .radar-blip-glow-bar {
+            width: 3px; height: 36px; border-radius: 2px;
+            background: rgba(255, 255, 255, 0.06); overflow: hidden;
+            flex-shrink: 0; display: flex; flex-direction: column; justify-content: flex-end;
+        }
+        .radar-blip-glow-fill {
+            width: 100%; border-radius: 2px;
+            transition: height 1s ease;
+        }
+        .radar-blip-info {
+            flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;
+        }
+        .radar-blip-venue {
+            font-size: 13px; font-weight: 700; color: var(--text-primary);
+            text-transform: uppercase; letter-spacing: 0.4px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .radar-blip-status {
+            font-size: 10px; color: var(--text-dim);
+            text-transform: uppercase; font-family: monospace; letter-spacing: 0.8px;
+        }
+
+        /* --- Tab Strip --- */
+        .radar-tab-strip {
+            display: flex; gap: 0; margin-bottom: 20px;
+            border-bottom: 1px solid #2A2A38;
+            position: relative;
+        }
+        .radar-tab-strip::after {
+            content: '';
+            position: absolute; bottom: -1px; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(147, 51, 234, 0.3), rgba(236, 72, 153, 0.2), transparent);
+        }
+        .radar-tab {
+            padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer;
+            color: var(--text-dim); border-bottom: 2px solid transparent;
+            transition: color 0.25s, border-color 0.25s, text-shadow 0.25s;
+            position: relative;
+        }
+        .radar-tab.active {
+            color: #c084fc;
+            border-bottom-color: #9333ea;
+            text-shadow: 0 0 12px rgba(147, 51, 234, 0.5);
+        }
+        .radar-tab:hover:not(.active) {
+            color: var(--text-primary);
+            text-shadow: 0 0 8px rgba(147, 51, 234, 0.2);
+        }
+
+        /* --- Report Card --- */
+        .radar-report-card {
+            background: linear-gradient(145deg, var(--surface), rgba(26, 26, 36, 0.8));
+            border: 1px solid rgba(147, 51, 234, 0.2);
+            border-radius: 12px; padding: 18px; margin-bottom: 14px;
+            position: relative; overflow: hidden;
+            animation: borderPulse 4s ease-in-out infinite;
+            transition: all 0.3s ease;
+        }
+        .radar-report-card::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(147, 51, 234, 0.5), rgba(236, 72, 153, 0.3), transparent);
+        }
+        .radar-report-card::after {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(147, 51, 234, 0.015) 2px,
+                rgba(147, 51, 234, 0.015) 4px
+            );
+            pointer-events: none;
+            z-index: 0;
+        }
+        .radar-report-card > * { position: relative; z-index: 1; }
+        .radar-report-card:hover {
+            border-color: rgba(147, 51, 234, 0.4);
+            box-shadow: 0 4px 24px rgba(147, 51, 234, 0.12), 0 0 40px rgba(236, 72, 153, 0.06);
+            transform: translateY(-1px);
+        }
+
         .activity-item {
             display: flex;
             align-items: flex-start;
@@ -1003,7 +1215,13 @@
             border-bottom: var(--border);
             background: var(--surface-inset);
             overflow-x: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.15) transparent;
         }
+        .agent-tabs::-webkit-scrollbar { height: 3px; }
+        .agent-tabs::-webkit-scrollbar-track { background: transparent; }
+        .agent-tabs::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+        .agent-tabs::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
 
         .agent-tab {
             padding: 10px 16px;
@@ -1264,11 +1482,152 @@
         }
         .doc-viewer-empty i { font-size: 40px; margin-bottom: 16px; display: block; opacity: 0.3; }
 
+        .doc-version-panel {
+            border-top: 1px solid var(--surface-elevated);
+            padding: 20px 28px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .doc-version-panel-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .doc-version-panel-header h3 {
+            font-size: 14px; font-weight: 600; color: var(--text-primary); margin: 0;
+        }
+        .doc-version-panel-header button {
+            background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 12px;
+        }
+        .doc-version-panel-header button:hover { color: var(--text-primary); }
+        .doc-version-list { display: flex; flex-direction: column; gap: 4px; }
+        .doc-version-item {
+            display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+            border-radius: 8px; cursor: pointer; transition: background 0.15s;
+        }
+        .doc-version-item:hover { background: var(--surface-elevated); }
+        .doc-version-item.active { background: var(--accent)11; border: 1px solid var(--accent)44; }
+        .doc-version-badge {
+            min-width: 32px; height: 32px; border-radius: 50%;
+            background: var(--surface-elevated); display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: 700; color: var(--text-muted);
+        }
+        .doc-version-item.active .doc-version-badge { background: var(--accent); color: #fff; }
+        .doc-version-info { flex: 1; min-width: 0; }
+        .doc-version-info .ver-title {
+            font-size: 13px; font-weight: 500; color: var(--text-primary);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .doc-version-info .ver-meta { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+        .doc-version-restore-btn {
+            padding: 5px 12px; border-radius: 6px; border: 1px solid var(--accent);
+            background: transparent; color: var(--accent); font-size: 11px; font-weight: 600;
+            cursor: pointer; white-space: nowrap; transition: all 0.15s;
+        }
+        .doc-version-restore-btn:hover { background: var(--accent); color: #fff; }
+        .doc-version-preview-banner {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 20px; background: #F59E0B22; border-bottom: 1px solid #F59E0B44;
+            font-size: 12px; color: #F59E0B; font-weight: 600;
+        }
+        .doc-version-preview-banner button {
+            padding: 4px 12px; border-radius: 6px; border: 1px solid #F59E0B;
+            background: transparent; color: #F59E0B; font-size: 11px; cursor: pointer;
+        }
+        .doc-version-preview-banner button:hover { background: #F59E0B; color: #000; }
+
         .doc-pin-toggle {
             background: none; border: none; cursor: pointer; font-size: 18px;
             color: var(--text-dim); transition: var(--transition); padding: 4px;
         }
         .doc-pin-toggle.active { color: #F59E0B; }
+
+        /* Documents Two-Panel Layout */
+        .doc-layout {
+            display: flex; height: calc(100% + 48px); margin: -24px;
+        }
+        .doc-sidebar {
+            width: 260px; min-width: 260px; display: flex; flex-direction: column;
+            border-right: var(--border); background: var(--surface-inset);
+        }
+        .doc-sidebar-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 20px 16px 12px; flex-shrink: 0;
+        }
+        .doc-sidebar-header h2 {
+            font-size: 16px; font-weight: 700; margin: 0;
+        }
+        .doc-sidebar-header button {
+            background: var(--accent); color: white; border: none; border-radius: 8px;
+            padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+            transition: var(--transition);
+        }
+        .doc-sidebar-header button:hover { opacity: 0.85; }
+        .doc-sidebar-search {
+            padding: 0 16px 12px; flex-shrink: 0;
+        }
+        .doc-sidebar-search input {
+            width: 100%; background: var(--surface); border: var(--border); border-radius: 8px;
+            padding: 8px 12px; color: var(--text-primary); font-size: 13px;
+        }
+        .doc-sidebar-search input::placeholder { color: var(--text-dim); }
+        .doc-sidebar-search input:focus { border-color: var(--accent); outline: none; }
+        .doc-sidebar-sort {
+            padding: 0 16px 8px; flex-shrink: 0;
+        }
+        .doc-sidebar-sort select {
+            width: 100%; background: var(--surface); border: var(--border); border-radius: 8px;
+            padding: 6px 10px; color: var(--text-muted); font-size: 12px;
+        }
+        .doc-sidebar-folders {
+            display: flex; flex-direction: column; gap: 4px; padding: 0 12px 12px; flex-shrink: 0;
+        }
+        .doc-sidebar-folders .doc-folder-tab {
+            text-align: left; border-radius: 8px; padding: 6px 12px; font-size: 13px;
+        }
+        .doc-sidebar-folders .doc-folder-tab.active {
+            background: var(--accent); color: white; border-color: var(--accent);
+        }
+        .doc-tree {
+            flex: 1; overflow-y: auto; padding: 0 8px 16px;
+        }
+        .doc-tree-folder-heading {
+            font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+            padding: 12px 8px 6px; color: var(--text-dim);
+        }
+        .doc-tree-item {
+            padding: 8px 12px; border-radius: 8px; cursor: pointer; display: flex;
+            align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted);
+            transition: var(--transition); margin-bottom: 2px; white-space: nowrap;
+            overflow: hidden; text-overflow: ellipsis;
+        }
+        .doc-tree-item:hover { background: var(--surface-elevated); color: var(--text-primary); }
+        .doc-tree-item.active { background: var(--surface-elevated); color: var(--text-primary); border: 0.5px solid var(--accent); }
+        .doc-tree-item .doc-pin-indicator { font-size: 10px; flex-shrink: 0; }
+        .doc-content-area {
+            flex: 1; overflow-y: auto; display: flex; flex-direction: column; min-width: 0;
+        }
+        .doc-content-empty {
+            flex: 1; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; color: var(--text-dim); gap: 12px;
+        }
+        .doc-content-empty i { font-size: 48px; opacity: 0.2; }
+        .doc-content-empty p { font-size: 14px; }
+        .doc-inline-viewer {
+            display: flex; flex-direction: column; flex: 1;
+        }
+        .doc-inline-editor {
+            display: flex; flex-direction: column; flex: 1;
+        }
+        .doc-inline-editor .doc-editor-content {
+            flex: 1; max-height: none; min-height: 200px;
+        }
+        .doc-inline-editor-footer {
+            display: flex; align-items: center; gap: 10px; padding: 16px 24px;
+            border-top: var(--border); background: var(--surface-inset); flex-shrink: 0;
+        }
+        .doc-sidebar-toggle {
+            display: none;
+        }
 
         /* Ideas Module */
         .idea-quick-add {
@@ -2409,6 +2768,27 @@
                 font-size: 13px;
             }
 
+            /* --- DOCUMENTS: mobile two-panel --- */
+            .doc-layout {
+                margin: -16px;
+                height: calc(100% + 32px);
+            }
+            .doc-sidebar {
+                position: fixed; top: 0; left: 0; bottom: 60px; width: 100%; min-width: 100%;
+                z-index: 400; background: var(--bg);
+                transform: translateX(-100%); transition: transform 0.3s ease;
+            }
+            .doc-sidebar.open {
+                transform: translateX(0);
+            }
+            .doc-sidebar-toggle {
+                display: flex !important; position: fixed; bottom: 80px; left: 16px;
+                width: 48px; height: 48px; border-radius: 50%; background: var(--accent);
+                color: white; border: none; align-items: center; justify-content: center;
+                font-size: 18px; z-index: 399; cursor: pointer;
+                box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+            }
+
             /* --- IDEA PIPELINE (Kanban): horizontal scroll --- */
             .idea-pipeline {
                 grid-template-columns: 1fr !important;
@@ -2691,9 +3071,12 @@
             .agent-tabs {
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
-                scrollbar-width: none;
+                scrollbar-width: thin;
+                scrollbar-color: rgba(255,255,255,0.15) transparent;
             }
-            .agent-tabs::-webkit-scrollbar { display: none; }
+            .agent-tabs::-webkit-scrollbar { height: 3px; }
+            .agent-tabs::-webkit-scrollbar-track { background: transparent; }
+            .agent-tabs::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
 
             /* Checklist week: ensure touch friendly */
             .checklist-week-day {
@@ -3178,16 +3561,22 @@
                 <div id="docViewTags"></div>
                 <div class="doc-viewer-actions">
                     <button id="docViewPinBtn" onclick="toggleViewerPin()" title="Pin"><i class="fa-solid fa-star"></i></button>
+                    <button onclick="openDocHistory()" title="History" id="docViewHistoryBtn"><i class="fa-solid fa-clock-rotate-left"></i></button>
                     <button onclick="openDocEditorFromViewer()" title="Edit"><i class="fa-solid fa-pen"></i></button>
                     <button onclick="deleteCurrentDoc()" title="Delete" style="color: #EF4444;"><i class="fa-solid fa-trash"></i></button>
                     <button onclick="closeDocViewer()" title="Close"><i class="fa-solid fa-times"></i></button>
                 </div>
+            </div>
+            <div id="docVersionPreviewBanner" class="doc-version-preview-banner" style="display:none;">
+                <span><i class="fa-solid fa-clock-rotate-left" style="margin-right:6px;"></i>Previewing version <span id="docVersionPreviewNum"></span></span>
+                <button onclick="backToCurrentDoc()">Back to current</button>
             </div>
             <div class="doc-viewer-hero">
                 <div class="doc-viewer-title" id="docViewTitle"></div>
                 <div class="doc-viewer-meta" id="docViewMeta"></div>
             </div>
             <div class="doc-viewer-body" id="docViewBody"></div>
+            <div id="docVersionPanel" class="doc-version-panel" style="display:none;"></div>
         </div>
     </div>
 
@@ -3875,6 +4264,8 @@
             editingDoc: null,
             editingDocTags: [],
             editingDocPinned: false,
+            docVersions: [],
+            docViewingVersion: null,
             chatSessions: [],
             events: [],
             calMonth: new Date().getMonth(),
@@ -3898,7 +4289,12 @@
             plannerWeekOffset: 0,
             radarUpdates: [],
             radarPrompts: [],
-            scratches: []
+            radarReports: [],
+            radarTab: 'scanner',
+            scratches: [],
+            activeDocId: null,
+            docMode: 'browse',
+            docSidebarCollapsed: false
         };
 
         const SEED_PLAYBOOKS = [
@@ -3980,6 +4376,14 @@
             const dt = d || new Date();
             return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
         };
+
+        // Nightlife offset: before 4 AM counts as the previous day's "night"
+        const getNightlifeDate = () => {
+            const now = new Date();
+            if (now.getHours() < 4) now.setDate(now.getDate() - 1);
+            return now;
+        };
+        const getNightlifeDateStr = () => getLocalDateStr(getNightlifeDate());
 
         const apiCall = async (path, opts = {}, _retried) => {
             const token = localStorage.getItem('cc_auth_token');
@@ -4108,6 +4512,7 @@
             closeMobileMore();
             state.view = view;
             localStorage.setItem('cc_current_view', view);
+            document.body.dataset.currentView = view;
             document.querySelector('.nav-icon.active')?.classList.remove('active');
             const icon = document.querySelector(`[data-view="${view}"]`);
             if (icon) icon.classList.add('active');
@@ -4217,7 +4622,7 @@
             try {
                 const safeGet = (path) => api.get(path).catch((e) => { if (e.message === 'Session expired') throw e; return []; });
                 const todayDate = getLocalDateStr();
-                const [companies, playbooks, tasks, logs, chat, tools, docs, chatSessions, events, ideas, contacts, recurringTasks, recurringCompletions, radarUpdates, radarPrompts, scratches] = await Promise.all([
+                const [companies, playbooks, tasks, logs, chat, tools, docs, chatSessions, events, ideas, contacts, recurringTasks, recurringCompletions, radarUpdates, radarPrompts, radarReports, scratches] = await Promise.all([
                     safeGet('/api/companies'),
                     safeGet('/api/playbooks'),
                     safeGet('/api/tasks'),
@@ -4233,6 +4638,7 @@
                     safeGet(`/api/recurring-completions?date=${todayDate}`),
                     safeGet('/api/radar'),
                     safeGet('/api/radar/prompts'),
+                    safeGet('/api/radar/reports'),
                     safeGet('/api/scratches')
                 ]);
 
@@ -4270,6 +4676,7 @@
                 state.recurringCompletions = recurringCompletions;
                 state.radarUpdates = radarUpdates;
                 state.radarPrompts = radarPrompts;
+                state.radarReports = radarReports;
                 state.scratches = scratches;
 
                 $('chatStatus').innerText = 'Online — DB connected';
@@ -4508,6 +4915,82 @@
                 </div>`;
         };
 
+        function cycleRadarWidgetCity() {
+            const reports = state.radarReports || [];
+            // Get unique cities that have reports (latest per city)
+            const seen = new Set();
+            const cities = [];
+            reports.forEach(r => { if (!seen.has(r.city)) { seen.add(r.city); cities.push(r.city); } });
+            if (cities.length <= 1) return;
+            const currentIdx = cities.indexOf(state.radarWidgetCity || cities[0]);
+            state.radarWidgetCity = cities[(currentIdx + 1) % cities.length];
+            renderDashboard();
+        }
+
+        const buildRadarWidgetHTML = () => {
+            const reports = state.radarReports || [];
+            // Find latest report for the selected city, or just the latest overall
+            const selectedCity = state.radarWidgetCity;
+            const report = selectedCity ? reports.find(r => r.city === selectedCity) || reports[0] : reports[0];
+            if (!report) {
+                return `<div class="dash-section">
+                    <div class="dash-section-title"><i class="fa-solid fa-satellite-dish" style="color: #9333ea;"></i> Nightlife Radar</div>
+                    <div style="color: var(--text-dim); font-size: 14px; padding: 8px 0;">No radar reports yet. <span style="color: var(--accent); cursor: pointer;" onclick="state.view='radar'; state.radarTab='report'; localStorage.setItem('cc_current_view','radar'); document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=radar]')?.classList.add('active'); const ag=document.querySelector('.agenda-container'); ag.style.display='none'; $('mainContent').style.gridTemplateRows='0px auto 1fr'; renderRadar();">Run a scan from the Radar page.</span></div>
+                </div>`;
+            }
+            const age = Date.now() - new Date(report.created_at).getTime();
+            const dotColor = age < 6*60*60*1000 ? '#10B981' : age < 24*60*60*1000 ? '#F59E0B' : '#6B7280';
+            const signalLabel = age < 6*60*60*1000 ? 'High' : age < 24*60*60*1000 ? 'Medium' : 'Stale';
+            const ageMin = Math.floor(age / 60000);
+            const freshness = ageMin < 60 ? ageMin + 'm ago' : ageMin < 1440 ? Math.floor(ageMin/60) + 'h ago' : Math.floor(ageMin/1440) + 'd ago';
+            const blips = report.radar_blips || [];
+            const score = report.vibe_score;
+            const gaugeColor = score >= 80 ? '#EF4444' : score >= 60 ? '#F59E0B' : score >= 30 ? '#9333ea' : '#6B7280';
+            return `<div class="dash-section">
+                <div class="radar-widget-header" style="margin-bottom: 12px;">
+                    <div class="radar-pulse-dot" style="background: ${dotColor}; color: ${dotColor};"></div>
+                    <div class="dash-section-title" style="margin-bottom: 0;"><i class="fa-solid fa-satellite-dish" style="color: #9333ea;"></i> Nightlife Radar</div>
+                    <span onclick="cycleRadarWidgetCity()" style="background: var(--accent); color: white; font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 20px; margin-left: auto; cursor: pointer; transition: opacity 0.2s;" title="Click to cycle cities">${report.city}</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 10px;">
+                    <div class="radar-busyness-gauge" style="--gauge-color: ${gaugeColor}; --gauge-pct: ${score}%;">
+                        <svg viewBox="0 0 72 72" width="60" height="60">
+                            <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="5"/>
+                            <circle cx="36" cy="36" r="30" fill="none" stroke="${gaugeColor}" stroke-width="5"
+                                stroke-dasharray="${score * 1.885} 188.5"
+                                stroke-linecap="round" transform="rotate(-90 36 36)"
+                                style="filter: drop-shadow(0 0 4px ${gaugeColor}); transition: stroke-dasharray 1s ease;"/>
+                        </svg>
+                        <span class="radar-gauge-score">${score}</span>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #ec4899; margin-bottom: 4px;">${report.vibe_label}</div>
+                        <div style="font-size: 11px; color: var(--text-dim);">Signal: ${signalLabel} // ${freshness}</div>
+                    </div>
+                </div>
+                <div class="radar-blip-stack">
+                    ${blips.map(b => {
+                        const vb = b.venue_busyness || 0;
+                        const bColor = vb >= 80 ? '#EF4444' : vb >= 60 ? '#F59E0B' : vb >= 30 ? '#9333ea' : '#6B7280';
+                        const glowShadow = vb >= 80 ? 'box-shadow: 0 0 8px rgba(239,68,68,0.5);' : vb >= 60 ? 'box-shadow: 0 0 8px rgba(245,158,11,0.4);' : 'box-shadow: 0 0 6px rgba(147,51,234,0.4);';
+                        return `<div class="radar-blip-row" title="${b.crowd_type}">
+                            <div class="radar-blip-glow-bar">
+                                <div class="radar-blip-glow-fill" style="height: ${vb}%; background: ${bColor}; ${glowShadow}"></div>
+                            </div>
+                            <div class="radar-blip-info">
+                                <span class="radar-blip-venue">${b.venue}</span>
+                                <span class="radar-blip-status">${b.status} // ${vb}% density</span>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>
+                <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 10px;">${report.insider_take}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 12px; color: var(--accent); cursor: pointer; font-weight: 600;" onclick="state.view='radar'; state.radarTab='report'; localStorage.setItem('cc_current_view','radar'); document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=radar]')?.classList.add('active'); const ag=document.querySelector('.agenda-container'); ag.style.display='none'; $('mainContent').style.gridTemplateRows='0px auto 1fr'; renderRadar();">View Full Radar →</span>
+                </div>
+            </div>`;
+        };
+
         const renderDashboard = () => {
             if (state.view !== 'dashboard') return;
             const view = $('dynamicView');
@@ -4542,6 +5025,7 @@
                     <div class="dash-resize-handle" id="dashResizeHandle"></div>
 
                     <div>
+                        ${buildRadarWidgetHTML()}
                         <div class="dash-section">
                             <div class="dash-section-title"><i class="fa-solid fa-calendar-day" style="color: #EC4899;"></i> Today's Schedule</div>
                             ${(() => {
@@ -5019,18 +5503,61 @@
             if (state.view !== 'docs') return;
             const view = $('dynamicView');
 
-            // Filter by company first
+            // If skeleton already exists, just refresh sidebar contents
+            if (view.querySelector('#docLayout')) {
+                renderDocSidebarFolders();
+                renderDocTree();
+                return;
+            }
+
+            // Build two-panel skeleton
+            view.innerHTML = `
+                <div class="doc-layout" id="docLayout">
+                    <div class="doc-sidebar" id="docSidebar">
+                        <div class="doc-sidebar-header">
+                            <h2>Documents</h2>
+                            <button onclick="openDocEditor()">+ New</button>
+                        </div>
+                        <div class="doc-sidebar-search">
+                            <input type="text" placeholder="Search docs..." value="${state.docSearch}" oninput="state.docSearch=this.value; renderDocTree();">
+                        </div>
+                        <div class="doc-sidebar-sort">
+                            <select onchange="state.docSort=this.value; renderDocTree();">
+                                <option value="recent" ${state.docSort==='recent'?'selected':''}>Recent</option>
+                                <option value="az" ${state.docSort==='az'?'selected':''}>A &rarr; Z</option>
+                                <option value="pinned" ${state.docSort==='pinned'?'selected':''}>Pinned First</option>
+                            </select>
+                        </div>
+                        <div class="doc-sidebar-folders" id="docSidebarFolders"></div>
+                        <div class="doc-tree" id="docTree"></div>
+                        <div style="padding: 12px 16px; border-top: var(--border); flex-shrink: 0;">
+                            <button onclick="toggleChatPanel(true)" style="width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; background: var(--surface); border: var(--border); color: var(--text-muted); cursor: pointer; font-size: 13px; transition: var(--transition);" onmouseenter="this.style.background='var(--surface-elevated)';this.style.color='var(--text-primary)'" onmouseleave="this.style.background='var(--surface)';this.style.color='var(--text-muted)'">
+                                <i class="fa-solid fa-comments" style="color: var(--accent);"></i> AI Chat
+                            </button>
+                        </div>
+                    </div>
+                    <div class="doc-content-area" id="docContentArea"></div>
+                </div>
+                <button class="doc-sidebar-toggle" onclick="toggleDocSidebar()" title="Documents"><i class="fa-solid fa-folder-open"></i></button>
+            `;
+
+            renderDocSidebarFolders();
+            renderDocTree();
+            if (state.activeDocId) {
+                renderDocContent(state.activeDocId);
+            } else {
+                renderDocCards();
+            }
+        };
+
+        // --- DOCUMENT SIDEBAR & INLINE CONTENT ---
+        const getFilteredDocs = () => {
             let companyFiltered = state.selectedCompany === 'All workstations'
                 ? [...state.docs]
                 : state.docs.filter(d => d.company === state.selectedCompany);
 
-            // Get unique folders from company-filtered docs
-            const folders = ['All', ...new Set(companyFiltered.map(d => d.folder))];
-
-            // Filter by folder
             let filtered = state.docFilter === 'All' ? companyFiltered : companyFiltered.filter(d => d.folder === state.docFilter);
 
-            // Search
             if (state.docSearch) {
                 const q = state.docSearch.toLowerCase();
                 filtered = filtered.filter(d =>
@@ -5040,29 +5567,66 @@
                 );
             }
 
-            // Sort
             if (state.docSort === 'az') filtered.sort((a, b) => a.title.localeCompare(b.title));
             else if (state.docSort === 'pinned') filtered.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || new Date(b.updated_at) - new Date(a.updated_at));
             else filtered.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
 
-            let html = `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h1 style="font-size: 24px; font-weight: 700;">Documents</h1>
-                    <button class="btn-send" onclick="openDocEditor()">+ New Document</button>
-                </div>
-                <div class="doc-toolbar">
-                    <input type="text" placeholder="Search docs..." value="${state.docSearch}" oninput="state.docSearch=this.value; renderDocs();">
-                    <select onchange="state.docSort=this.value; renderDocs();">
-                        <option value="recent" ${state.docSort==='recent'?'selected':''}>Recent</option>
-                        <option value="az" ${state.docSort==='az'?'selected':''}>A → Z</option>
-                        <option value="pinned" ${state.docSort==='pinned'?'selected':''}>Pinned First</option>
-                    </select>
-                </div>
-                <div class="doc-folder-tabs">
-                    ${folders.map(f => `<div class="doc-folder-tab ${state.docFilter === f ? 'active' : ''}" onclick="state.docFilter='${f}'; renderDocs();">${f}</div>`).join('')}
-                </div>
-            `;
+            return { companyFiltered, filtered };
+        };
 
+        const renderDocSidebarFolders = () => {
+            const container = $('docSidebarFolders');
+            if (!container) return;
+            const companyFiltered = state.selectedCompany === 'All workstations'
+                ? [...state.docs]
+                : state.docs.filter(d => d.company === state.selectedCompany);
+            const folders = ['All', ...new Set(companyFiltered.map(d => d.folder))];
+            container.innerHTML = folders.map(f =>
+                `<div class="doc-folder-tab ${state.docFilter === f ? 'active' : ''}" onclick="state.docFilter='${f.replace(/'/g, "\\'")}'; renderDocSidebarFolders(); renderDocTree();">${f}</div>`
+            ).join('');
+        };
+
+        const renderDocTree = () => {
+            const container = $('docTree');
+            if (!container) return;
+            const { filtered } = getFilteredDocs();
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div style="text-align: center; color: var(--text-dim); padding: 24px; font-size: 13px;">No documents found</div>`;
+                return;
+            }
+
+            // Group by folder
+            const groups = {};
+            filtered.forEach(doc => {
+                const f = doc.folder || 'General';
+                if (!groups[f]) groups[f] = [];
+                groups[f].push(doc);
+            });
+
+            let html = '';
+            for (const [folder, docs] of Object.entries(groups)) {
+                const folderColor = getFolderColor(folder);
+                html += `<div class="doc-tree-folder-heading" style="color: ${folderColor};">${folder}</div>`;
+                docs.forEach(doc => {
+                    const isActive = state.activeDocId === doc.id;
+                    html += `<div class="doc-tree-item${isActive ? ' active' : ''}" onclick="selectDoc('${doc.id}')">
+                        ${doc.pinned ? '<span class="doc-pin-indicator"><i class="fa-solid fa-star"></i></span>' : ''}
+                        <span style="overflow: hidden; text-overflow: ellipsis;">${doc.title}</span>
+                    </div>`;
+                });
+            }
+            container.innerHTML = html;
+            // Also refresh card grid if no doc is selected
+            if (!state.activeDocId) renderDocCards();
+        };
+
+        const renderDocCards = () => {
+            const area = $('docContentArea');
+            if (!area) return;
+            const { filtered } = getFilteredDocs();
+
+            let html = '<div style="padding: 24px;">';
             if (filtered.length === 0) {
                 html += `<div style="text-align: center; color: var(--text-dim); padding: 40px;">No documents found. Create one to get started.</div>`;
             } else {
@@ -5076,7 +5640,7 @@
                     const companyColor = companyObj ? companyObj.color : 'var(--text-dim)';
                     const timeAgo = new Date(doc.updated_at).toLocaleDateString();
                     html += `
-                        <div class="doc-card" onclick="openDocViewer('${doc.id}')">
+                        <div class="doc-card" onclick="selectDoc('${doc.id}')">
                             <div class="doc-card-title">
                                 ${doc.pinned ? '<span class="doc-pin-indicator"><i class="fa-solid fa-star"></i></span>' : ''}
                                 ${doc.title}
@@ -5094,12 +5658,252 @@
                 });
                 html += `</div>`;
             }
+            html += '</div>';
+            area.innerHTML = html;
+        };
 
-            view.innerHTML = html;
+        const selectDoc = (docId) => {
+            state.activeDocId = docId;
+            state.docMode = 'view';
+            renderDocContent(docId);
+            renderDocTree();
+            // Close mobile sidebar
+            const sidebar = $('docSidebar');
+            if (sidebar) sidebar.classList.remove('open');
+        };
+
+        const renderDocContent = (docId) => {
+            const area = $('docContentArea');
+            if (!area) return;
+            const doc = state.docs.find(d => d.id === docId);
+            if (!doc) {
+                area.innerHTML = `<div class="doc-content-empty"><i class="fa-solid fa-file-lines"></i><p>Document not found</p></div>`;
+                return;
+            }
+            state.editingDoc = doc;
+
+            const folderColor = getFolderColor(doc.folder);
+            const tags = doc.tags || [];
+            const companyObj = state.companies.find(c => c.name === doc.company);
+            const companyColor = companyObj ? companyObj.color : 'var(--text-dim)';
+            const created = new Date(doc.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            const updated = new Date(doc.updated_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+            // Body content — detect markdown
+            const content = doc.content || '';
+            const plainText = content.replace(/<[^>]*>/g, '').trim();
+            let bodyHtml;
+            if (plainText === '') {
+                bodyHtml = `<div class="doc-viewer-empty"><i class="fa-solid fa-file-lines"></i>This document is empty.<br><span style="font-size: 14px; margin-top: 8px; display: inline-block;">Click the edit button to add content.</span></div>`;
+            } else {
+                const looksLikeMarkdown = /^#{1,3}\s|^\-{3,}$|^\*\*|^[-*]\s|^>\s|^```|^\d+\.\s/m.test(plainText);
+                if (looksLikeMarkdown) {
+                    bodyHtml = `<div style="font-size: 14px; line-height: 1.7; color: var(--text-primary);">${formatChatContent(plainText)}</div>`;
+                } else {
+                    bodyHtml = content;
+                }
+            }
+
+            area.innerHTML = `
+                <div class="doc-inline-viewer">
+                    <div class="doc-viewer-topbar">
+                        <span class="doc-folder-badge" id="docViewFolder" style="background: ${folderColor}22; color: ${folderColor};">${doc.folder}</span>
+                        <div id="docViewTags">${tags.map(t => `<span class="doc-tag">${t}</span>`).join('')}</div>
+                        <div class="doc-viewer-actions">
+                            <button id="docViewPinBtn" class="${doc.pinned ? 'active' : ''}" onclick="toggleViewerPin()" title="Pin"><i class="fa-solid fa-star"></i></button>
+                            <button onclick="openDocHistory()" title="History" id="docViewHistoryBtn"><i class="fa-solid fa-clock-rotate-left"></i></button>
+                            <button onclick="openDocEditorFromViewer()" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                            <span style="width: 1px; height: 20px; background: var(--surface-elevated); margin: 0 4px;"></span>
+                            <button onclick="deleteCurrentDoc()" title="Delete" style="color: var(--text-dim); font-size: 12px; opacity: 0.5;" onmouseenter="this.style.opacity='1';this.style.color='#EF4444'" onmouseleave="this.style.opacity='0.5';this.style.color='var(--text-dim)'"><i class="fa-solid fa-trash"></i></button>
+                            <span style="width: 1px; height: 20px; background: var(--surface-elevated); margin: 0 4px;"></span>
+                            <button onclick="closeDocViewer()" title="Close"><i class="fa-solid fa-times"></i></button>
+                        </div>
+                    </div>
+                    <div id="docVersionPreviewBanner" class="doc-version-preview-banner" style="display:none;">
+                        <span><i class="fa-solid fa-clock-rotate-left" style="margin-right:6px;"></i>Previewing version <span id="docVersionPreviewNum"></span></span>
+                        <button onclick="backToCurrentDoc()">Back to current</button>
+                    </div>
+                    <div class="doc-viewer-hero">
+                        <div class="doc-viewer-title" id="docViewTitle">${doc.title}</div>
+                        <div class="doc-viewer-meta" id="docViewMeta">
+                            <span><i class="fa-solid fa-building"></i> <span style="color: ${companyColor}; font-weight: 600;">${doc.company || 'No workstation'}</span></span>
+                            <span><i class="fa-solid fa-calendar"></i> Created ${created}</span>
+                            <span><i class="fa-solid fa-clock"></i> Updated ${updated}</span>
+                        </div>
+                    </div>
+                    <div class="doc-viewer-body" id="docViewBody" style="flex: 1;">${bodyHtml}</div>
+                    <div id="docVersionPanel" class="doc-version-panel" style="display:none;"></div>
+                </div>
+            `;
+
+            // Reset version state
+            state.docVersions = [];
+            state.docViewingVersion = null;
+        };
+
+        const openDocEditorInline = (docId) => {
+            const area = $('docContentArea');
+            if (!area) return;
+
+            const doc = docId ? state.docs.find(d => d.id === docId) : null;
+            if (doc) {
+                state.editingDoc = doc;
+                state.editingDocTags = [...(doc.tags || [])];
+                state.editingDocPinned = doc.pinned;
+            } else {
+                state.editingDoc = null;
+                state.editingDocTags = [];
+                state.editingDocPinned = false;
+            }
+            state.docMode = 'edit';
+
+            const companyOptions = state.companies.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+            const folders = [...new Set(state.docs.map(d => d.folder))];
+            const folderDatalist = folders.map(f => `<option value="${f}">`).join('');
+
+            const tagsHtml = state.editingDocTags.map(t =>
+                `<span class="doc-tag">${t} <span class="remove-tag" onclick="removeDocTag('${t}')">&times;</span></span>`
+            ).join('');
+
+            area.innerHTML = `
+                <div class="doc-inline-editor">
+                    <div style="padding: 24px 32px 16px; flex-shrink: 0;">
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                            <input type="text" id="docTitleInput" placeholder="Document title..." style="flex: 1; font-size: 18px; font-weight: 600; background: var(--surface); border: var(--border); border-radius: 10px; padding: 12px 16px; color: var(--text-primary);">
+                            <button class="doc-pin-toggle" id="docPinToggle" onclick="toggleDocPin()" title="Pin document">
+                                <i class="fa-solid fa-star"></i>
+                            </button>
+                        </div>
+                        <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                <label style="font-size: 12px;">Workstation</label>
+                                <select id="docCompanyInput">${companyOptions}</select>
+                            </div>
+                            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                <label style="font-size: 12px;">Folder</label>
+                                <input type="text" id="docFolderInput" list="docFolderListInline" placeholder="General">
+                                <datalist id="docFolderListInline">${folderDatalist}</datalist>
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <label style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 6px;">Tags</label>
+                            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;" id="docTagsContainer">
+                                ${tagsHtml}
+                                <input type="text" id="docTagInput" placeholder="Add tag + Enter" style="width: 140px; font-size: 13px;"
+                                    onkeydown="if(event.key==='Enter'){event.preventDefault();addDocTag();}">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="doc-editor-wrap" style="margin: 0 32px; flex: 1; display: flex; flex-direction: column;">
+                        <div class="doc-editor-toolbar">
+                            <select class="doc-tb-select" onchange="docExec('formatBlock', this.value); this.value='';">
+                                <option value="">Paragraph</option>
+                                <option value="h1">Heading 1</option>
+                                <option value="h2">Heading 2</option>
+                                <option value="h3">Heading 3</option>
+                                <option value="blockquote">Quote</option>
+                            </select>
+                            <div class="sep"></div>
+                            <button class="doc-tb-btn" data-cmd="bold" onclick="docExec('bold')" title="Bold"><i class="fa-solid fa-bold"></i></button>
+                            <button class="doc-tb-btn" data-cmd="italic" onclick="docExec('italic')" title="Italic"><i class="fa-solid fa-italic"></i></button>
+                            <button class="doc-tb-btn" data-cmd="underline" onclick="docExec('underline')" title="Underline"><i class="fa-solid fa-underline"></i></button>
+                            <button class="doc-tb-btn" data-cmd="strikeThrough" onclick="docExec('strikeThrough')" title="Strikethrough"><i class="fa-solid fa-strikethrough"></i></button>
+                            <button class="doc-tb-btn" onclick="docExec('inlineCode')" title="Inline Code"><i class="fa-solid fa-code"></i></button>
+                            <div class="sep"></div>
+                            <button class="doc-tb-btn" data-cmd="insertUnorderedList" onclick="docExec('insertUnorderedList')" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
+                            <button class="doc-tb-btn" data-cmd="insertOrderedList" onclick="docExec('insertOrderedList')" title="Numbered List"><i class="fa-solid fa-list-ol"></i></button>
+                            <button class="doc-tb-btn" onclick="docExec('indent')" title="Indent"><i class="fa-solid fa-indent"></i></button>
+                            <button class="doc-tb-btn" onclick="docExec('outdent')" title="Outdent"><i class="fa-solid fa-outdent"></i></button>
+                            <div class="sep"></div>
+                            <button class="doc-tb-btn" onclick="docExec('insertCodeBlock')" title="Code Block"><i class="fa-solid fa-rectangle-code"></i></button>
+                            <button class="doc-tb-btn" onclick="docInsertLink()" title="Link"><i class="fa-solid fa-link"></i></button>
+                            <button class="doc-tb-btn" onclick="docExec('insertHorizontalRule')" title="Divider"><i class="fa-solid fa-minus"></i></button>
+                            <div class="sep"></div>
+                            <button class="doc-tb-btn" onclick="docExec('removeFormat')" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
+                            <button class="doc-tb-btn" onclick="docExec('undo')" title="Undo"><i class="fa-solid fa-rotate-left"></i></button>
+                            <button class="doc-tb-btn" onclick="docExec('redo')" title="Redo"><i class="fa-solid fa-rotate-right"></i></button>
+                        </div>
+                        <div class="doc-editor-content" id="docContentInput" contenteditable="true"
+                             onpaste="docHandlePaste(event)"
+                             onkeydown="docHandleKeydown(event)"
+                             onkeyup="docUpdateToolbar()"
+                             onclick="docUpdateToolbar()"></div>
+                    </div>
+                    <div class="doc-inline-editor-footer">
+                        ${doc ? '<button class="btn-chat-action" style="background: #EF4444; color: white;" onclick="deleteCurrentDoc()">Delete</button>' : ''}
+                        <div style="flex: 1;"></div>
+                        <button class="btn-chat-action" onclick="cancelDocEdit()">Cancel</button>
+                        <button class="btn-send" onclick="saveDocInline()">Save Document</button>
+                    </div>
+                </div>
+            `;
+
+            // Set values after DOM exists
+            if (doc) {
+                $('docTitleInput').value = doc.title;
+                $('docCompanyInput').value = doc.company || state.companies[0]?.name || '';
+                $('docFolderInput').value = doc.folder;
+                $('docContentInput').innerHTML = doc.content;
+            } else {
+                $('docTitleInput').value = '';
+                $('docCompanyInput').value = state.selectedCompany !== 'All workstations' ? state.selectedCompany : (state.companies[0]?.name || '');
+                $('docFolderInput').value = 'General';
+                $('docContentInput').innerHTML = '';
+            }
+            updatePinToggle();
+        };
+
+        const saveDocInline = async () => {
+            const title = $('docTitleInput').value.trim() || 'Untitled';
+            const company = $('docCompanyInput').value;
+            const folder = $('docFolderInput').value.trim() || 'General';
+            const content = $('docContentInput').innerHTML;
+            const payload = { title, company, folder, content, tags: state.editingDocTags, pinned: state.editingDocPinned };
+
+            try {
+                let savedId;
+                if (state.editingDoc) {
+                    const updated = await api.patch(`/api/docs/${state.editingDoc.id}`, payload);
+                    const idx = state.docs.findIndex(d => d.id === state.editingDoc.id);
+                    if (idx !== -1) state.docs[idx] = updated;
+                    savedId = state.editingDoc.id;
+                } else {
+                    const created = await api.post('/api/docs', payload);
+                    state.docs.unshift(created);
+                    savedId = created.id;
+                }
+                state.activeDocId = savedId;
+                state.docMode = 'view';
+                renderDocSidebarFolders();
+                renderDocTree();
+                renderDocContent(savedId);
+                renderSidebar();
+                if (state.view === 'dashboard') renderDashboard();
+                showToast('Document saved');
+            } catch (err) {
+                showToast('Failed to save: ' + err.message);
+            }
+        };
+
+        const cancelDocEdit = () => {
+            if (state.activeDocId) {
+                state.docMode = 'view';
+                renderDocContent(state.activeDocId);
+            } else {
+                state.docMode = 'browse';
+                const area = $('docContentArea');
+                renderDocCards();
+            }
+        };
+
+        const toggleDocSidebar = () => {
+            const sidebar = $('docSidebar');
+            if (sidebar) sidebar.classList.toggle('open');
         };
 
         // --- DOCUMENT VIEWER ---
         const openDocViewer = (docId) => {
+            if (state.view === 'docs') { selectDoc(docId); return; }
             const doc = state.docs.find(d => d.id === docId);
             if (!doc) return;
             state.editingDoc = doc;
@@ -5145,14 +5949,31 @@
                 }
             }
 
+            // Reset version panel state
+            state.docVersions = [];
+            state.docViewingVersion = null;
+            $('docVersionPanel').style.display = 'none';
+            $('docVersionPreviewBanner').style.display = 'none';
+            $('docViewHistoryBtn').classList.remove('active');
+
             $('docViewerOverlay').style.display = 'flex';
         };
 
         const closeDocViewer = () => {
+            if (state.view === 'docs') {
+                state.activeDocId = null;
+                state.docMode = 'browse';
+                const area = $('docContentArea');
+                renderDocCards();
+                renderDocTree();
+                return;
+            }
             $('docViewerOverlay').style.display = 'none';
+            state.docViewingVersion = null;
         };
 
         const openDocEditorFromViewer = () => {
+            if (state.view === 'docs') { openDocEditorInline(state.editingDoc?.id); return; }
             const docId = state.editingDoc?.id;
             closeDocViewer();
             if (docId) openDocEditor(docId);
@@ -5175,6 +5996,7 @@
         };
 
         const openDocEditor = (docId) => {
+            if (state.view === 'docs') { openDocEditorInline(docId); return; }
             // Populate company select
             $('docCompanyInput').innerHTML = state.companies.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
 
@@ -5210,6 +6032,7 @@
         };
 
         const saveDoc = async () => {
+            if (state.view === 'docs') { saveDocInline(); return; }
             const title = $('docTitleInput').value.trim() || 'Untitled';
             const company = $('docCompanyInput').value;
             const folder = $('docFolderInput').value.trim() || 'General';
@@ -5256,15 +6079,139 @@
             try {
                 await api.del(`/api/docs/${docId}`);
                 state.docs = state.docs.filter(d => d.id !== docId);
-                closeDocViewer();
-                closeModal('docEditorModal');
-                renderDocs();
+                if (state.view === 'docs') {
+                    state.activeDocId = null;
+                    state.docMode = 'browse';
+                    const area = $('docContentArea');
+                    renderDocCards();
+                    renderDocSidebarFolders();
+                    renderDocTree();
+                } else {
+                    closeDocViewer();
+                    closeModal('docEditorModal');
+                }
                 renderSidebar();
                 if (state.view === 'dashboard') renderDashboard();
                 showToast('Document deleted');
             } catch (err) {
                 showToast('Failed to delete: ' + err.message);
             }
+        };
+
+        // --- DOCUMENT VERSION HISTORY ---
+        const openDocHistory = async () => {
+            if (!state.editingDoc) return;
+            const panel = $('docVersionPanel');
+            const isOpen = panel.style.display !== 'none';
+            if (isOpen) {
+                panel.style.display = 'none';
+                $('docViewHistoryBtn').classList.remove('active');
+                return;
+            }
+            panel.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-dim);font-size:13px;">Loading versions...</div>';
+            panel.style.display = '';
+            $('docViewHistoryBtn').classList.add('active');
+            try {
+                const versions = await api.get(`/api/docs/${state.editingDoc.id}/versions`);
+                state.docVersions = versions;
+                renderVersionList();
+            } catch (err) {
+                panel.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-dim);font-size:13px;">Failed to load versions</div>';
+            }
+        };
+
+        const renderVersionList = () => {
+            const panel = $('docVersionPanel');
+            if (!state.docVersions.length) {
+                panel.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-dim);font-size:13px;"><i class="fa-solid fa-clock-rotate-left" style="font-size:24px;display:block;margin-bottom:8px;opacity:0.3;"></i>No previous versions yet.<br>Versions are created each time you save.</div>';
+                return;
+            }
+            let html = '<div class="doc-version-panel-header"><h3>Version History</h3><button onclick="closeDocHistory()">Close</button></div>';
+            html += '<div class="doc-version-list">';
+            for (const v of state.docVersions) {
+                const date = new Date(v.created_at);
+                const timeStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                const isActive = state.docViewingVersion === v.id;
+                html += `<div class="doc-version-item${isActive ? ' active' : ''}" onclick="previewDocVersion('${v.id}', ${v.version_number})">
+                    <div class="doc-version-badge">v${v.version_number}</div>
+                    <div class="doc-version-info">
+                        <div class="ver-title">${v.title}</div>
+                        <div class="ver-meta">${timeStr}</div>
+                    </div>
+                    <button class="doc-version-restore-btn" onclick="event.stopPropagation();restoreDocVersion('${v.id}')">Restore</button>
+                </div>`;
+            }
+            html += '</div>';
+            panel.innerHTML = html;
+        };
+
+        const previewDocVersion = async (versionId, versionNumber) => {
+            if (!state.editingDoc) return;
+            try {
+                const version = await api.get(`/api/docs/${state.editingDoc.id}/versions/${versionId}`);
+                state.docViewingVersion = versionId;
+
+                $('docViewTitle').textContent = version.title;
+                const content = version.content || '';
+                const plainText = content.replace(/<[^>]*>/g, '').trim();
+                if (plainText === '') {
+                    $('docViewBody').innerHTML = '<div class="doc-viewer-empty"><i class="fa-solid fa-file-lines"></i>This version was empty.</div>';
+                } else {
+                    const looksLikeMarkdown = /^#{1,3}\s|^\-{3,}$|^\*\*|^[-*]\s|^>\s|^```|^\d+\.\s/m.test(plainText);
+                    if (looksLikeMarkdown) {
+                        $('docViewBody').innerHTML = `<div style="font-size:14px;line-height:1.7;color:var(--text-primary);">${formatChatContent(plainText)}</div>`;
+                    } else {
+                        $('docViewBody').innerHTML = content;
+                    }
+                }
+
+                $('docVersionPreviewBanner').style.display = 'flex';
+                $('docVersionPreviewNum').textContent = `v${versionNumber}`;
+                renderVersionList();
+            } catch (err) {
+                showToast('Failed to load version');
+            }
+        };
+
+        const backToCurrentDoc = () => {
+            state.docViewingVersion = null;
+            $('docVersionPreviewBanner').style.display = 'none';
+            if (state.editingDoc) openDocViewer(state.editingDoc.id);
+        };
+
+        const restoreDocVersion = async (versionId) => {
+            if (!state.editingDoc) return;
+            try {
+                const updated = await api.post(`/api/docs/${state.editingDoc.id}/versions/${versionId}/restore`, {});
+                const idx = state.docs.findIndex(d => d.id === state.editingDoc.id);
+                if (idx !== -1) state.docs[idx] = updated;
+                state.editingDoc = updated;
+                state.docViewingVersion = null;
+                openDocViewer(updated.id);
+                // Wait for DOM rebuild (openDocViewer/selectDoc rebuilds inline viewer)
+                requestAnimationFrame(() => {
+                    const banner = $('docVersionPreviewBanner');
+                    if (banner) banner.style.display = 'none';
+                    // Refresh version list
+                    api.get(`/api/docs/${updated.id}/versions`).then(versions => {
+                        state.docVersions = versions;
+                        const panel = $('docVersionPanel');
+                        if (panel) panel.style.display = '';
+                        const histBtn = $('docViewHistoryBtn');
+                        if (histBtn) histBtn.classList.add('active');
+                        renderVersionList();
+                    });
+                });
+                if (state.view === 'docs') { renderDocSidebarFolders(); renderDocTree(); }
+                showToast('Version restored');
+            } catch (err) {
+                showToast('Failed to restore: ' + err.message);
+            }
+        };
+
+        const closeDocHistory = () => {
+            $('docVersionPanel').style.display = 'none';
+            $('docViewHistoryBtn').classList.remove('active');
         };
 
         const addDocTag = () => {
@@ -7641,24 +8588,74 @@
 
         function getWorkstationSystemPrompt() {
             const base = 'You are a helpful, friendly AI assistant inside a command center app. Be concise, warm, and directly helpful. If you don\'t know something, say so briefly and suggest how the user might find out. Never be dismissive or lecture the user.';
-            if (state.selectedCompany === 'All workstations') return base;
-            const ws = state.companies.find(c => c.name === state.selectedCompany);
-            if (!ws) return base;
             let prompt = base;
-            const parts = [];
-            if (ws.name) parts.push(`You are working in the context of "${ws.name}".`);
-            if (ws.industry) parts.push(`Industry: ${ws.industry}.`);
-            if (ws.audience) parts.push(`Target audience: ${ws.audience}.`);
-            if (ws.tone) parts.push(`Brand voice/tone: ${ws.tone}.`);
-            if (ws.context) {
-                const plainCtx = htmlToPlainText(ws.context);
-                if (plainCtx) parts.push(`Additional context:\n${plainCtx}`);
+
+            // Workstation context
+            if (state.selectedCompany !== 'All workstations') {
+                const ws = state.companies.find(c => c.name === state.selectedCompany);
+                if (ws) {
+                    const parts = [];
+                    if (ws.name) parts.push(`You are working in the context of "${ws.name}".`);
+                    if (ws.industry) parts.push(`Industry: ${ws.industry}.`);
+                    if (ws.audience) parts.push(`Target audience: ${ws.audience}.`);
+                    if (ws.tone) parts.push(`Brand voice/tone: ${ws.tone}.`);
+                    if (ws.context) {
+                        const plainCtx = htmlToPlainText(ws.context);
+                        if (plainCtx) parts.push(`Additional context:\n${plainCtx}`);
+                    }
+                    if (ws.description) {
+                        const plainDesc = htmlToPlainText(ws.description);
+                        if (plainDesc) parts.push(`About: ${plainDesc}`);
+                    }
+                    if (parts.length) prompt += '\n\n--- WORKSTATION CONTEXT ---\n' + parts.join('\n');
+                }
             }
-            if (ws.description) {
-                const plainDesc = htmlToPlainText(ws.description);
-                if (plainDesc) parts.push(`About: ${plainDesc}`);
+
+            // View context
+            const viewParts = [];
+            viewParts.push(`The user is currently on the "${state.view}" view.`);
+
+            if (state.view === 'docs' && state.editingDoc) {
+                const doc = state.editingDoc;
+                viewParts.push(`They are viewing a document titled "${doc.title}".`);
+                viewParts.push(`Folder: ${doc.folder}. Company: ${doc.company || 'None'}.`);
+                if (doc.tags?.length) viewParts.push(`Tags: ${doc.tags.join(', ')}.`);
+                // Try multiple sources for document content
+                let plainContent = '';
+                // 1. Try reading from visible DOM (most reliable — shows what user sees)
+                const viewerBody = document.getElementById('docViewBody');
+                const editorInput = document.getElementById('docContentInput');
+                if (viewerBody && viewerBody.textContent.trim()) {
+                    plainContent = viewerBody.textContent.replace(/\n{3,}/g, '\n\n').trim();
+                } else if (editorInput && editorInput.textContent.trim()) {
+                    plainContent = editorInput.textContent.replace(/\n{3,}/g, '\n\n').trim();
+                } else if (doc.content) {
+                    // 2. Fallback to stored content
+                    try {
+                        plainContent = htmlToPlainText(doc.content);
+                    } catch(e) {
+                        plainContent = doc.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+                    }
+                }
+                if (plainContent) {
+                    const truncated = plainContent.length > 8000
+                        ? plainContent.substring(0, 8000) + '\n... [truncated]'
+                        : plainContent;
+                    viewParts.push(`Full document content below — use it to answer any questions about this document:\n"""\n${truncated}\n"""`);
+                } else {
+                    viewParts.push('The document appears to be empty or has no readable text content.');
+                }
+                if (doc.created_at) viewParts.push(`Created: ${doc.created_at}.`);
+                if (doc.updated_at) viewParts.push(`Updated: ${doc.updated_at}.`);
+            } else if (state.view === 'docs') {
+                viewParts.push('They are browsing the documents list.');
             }
-            if (parts.length) prompt += '\n\n--- WORKSTATION CONTEXT ---\n' + parts.join('\n');
+
+            if (viewParts.length) {
+                prompt += '\n\n--- CURRENT VIEW CONTEXT ---\n' + viewParts.join('\n');
+                prompt += '\n\nIMPORTANT: The view context above reflects what the user is looking at RIGHT NOW. If the conversation history mentions a different document or view, ignore that — the user has navigated away. Always answer based on the CURRENT view context, not prior messages.';
+            }
+
             return prompt;
         }
 
@@ -7993,6 +8990,114 @@
         // --- RADAR VIEW ---
         // Radar prompts are stored in state.radarPrompts (loaded from DB)
 
+        function buildRadarReportView() {
+            const cities = ['Toronto', 'Montreal', 'New York', 'Miami', 'General'];
+            const selectedCity = state.radarCity || 'Toronto';
+            const reports = state.radarReports || [];
+            return `
+                <div style="background: var(--surface); border-radius: 12px; padding: 16px; margin-bottom: 20px; border: 1px solid var(--border);">
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <select id="radarReportCitySelect" style="background: var(--bg); color: var(--text-primary); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; flex-shrink: 0;">
+                            ${cities.map(c => `<option value="${c}" ${c === selectedCity ? 'selected' : ''}>${c}</option>`).join('')}
+                        </select>
+                        <button id="radarReportBtn" class="btn-chat-action" onclick="generateRadarReport()" style="flex-shrink: 0;">
+                            <i class="fa-solid fa-bolt"></i> Generate Report
+                        </button>
+                    </div>
+                </div>
+                ${reports.length === 0 ? `
+                    <div style="text-align: center; padding: 60px 20px; color: var(--text-secondary);">
+                        <i class="fa-solid fa-chart-bar" style="font-size: 48px; margin-bottom: 16px; opacity: 0.3;"></i>
+                        <p style="font-size: 15px;">No structured reports yet.</p>
+                        <p style="font-size: 13px; margin-top: 8px;">Generate a report to see vibe scores and venue intel.</p>
+                    </div>
+                ` : reports.map(r => {
+                    const date = new Date(r.created_at);
+                    const timeStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                    const blips = r.radar_blips || [];
+                    const score = r.vibe_score;
+                    const gaugeColor = score >= 80 ? '#EF4444' : score >= 60 ? '#F59E0B' : score >= 30 ? '#9333ea' : '#6B7280';
+                    const age = Date.now() - date.getTime();
+                    const signalLabel = age < 6*60*60*1000 ? 'High' : age < 24*60*60*1000 ? 'Medium' : 'Stale';
+                    const ageMin = Math.floor(age / 60000);
+                    const freshness = ageMin < 60 ? ageMin + 'm ago' : ageMin < 1440 ? Math.floor(ageMin/60) + 'h ago' : Math.floor(ageMin/1440) + 'd ago';
+                    return `
+                        <div class="radar-report-card">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px;">
+                                <span style="background: var(--accent); color: white; font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 20px;">${r.city}</span>
+                                <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #ec4899;">
+                                    <span class="radar-pulse-dot" style="background: #ec4899; color: #ec4899; display: inline-block; width: 6px; height: 6px; vertical-align: middle; margin-right: 4px;"></span>
+                                    ${r.vibe_label}
+                                </span>
+                                <span style="color: var(--text-dim); font-size: 11px; margin-left: auto;">Signal: ${signalLabel} // ${freshness}</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 14px;">
+                                <div class="radar-busyness-gauge" style="--gauge-color: ${gaugeColor};">
+                                    <svg viewBox="0 0 72 72" width="56" height="56">
+                                        <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="5"/>
+                                        <circle cx="36" cy="36" r="30" fill="none" stroke="${gaugeColor}" stroke-width="5"
+                                            stroke-dasharray="${score * 1.885} 188.5"
+                                            stroke-linecap="round" transform="rotate(-90 36 36)"
+                                            style="filter: drop-shadow(0 0 4px ${gaugeColor}); transition: stroke-dasharray 1s ease;"/>
+                                    </svg>
+                                    <span class="radar-gauge-score">${score}</span>
+                                </div>
+                                <div style="flex: 1;">
+                                    <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #ec4899; margin-bottom: 2px;">${r.vibe_label}</div>
+                                    <div style="font-size: 11px; color: var(--text-dim);">Signal: ${signalLabel} // ${freshness}</div>
+                                </div>
+                            </div>
+                            <div class="radar-blip-stack">
+                                ${blips.map(b => {
+                                    const vb = b.venue_busyness || 0;
+                                    const bColor = vb >= 80 ? '#EF4444' : vb >= 60 ? '#F59E0B' : vb >= 30 ? '#9333ea' : '#6B7280';
+                                    const glowShadow = vb >= 80 ? 'box-shadow: 0 0 8px rgba(239,68,68,0.5);' : vb >= 60 ? 'box-shadow: 0 0 8px rgba(245,158,11,0.4);' : 'box-shadow: 0 0 6px rgba(147,51,234,0.4);';
+                                    return `<div class="radar-blip-row" title="${b.crowd_type}">
+                                        <div class="radar-blip-glow-bar">
+                                            <div class="radar-blip-glow-fill" style="height: ${vb}%; background: ${bColor}; ${glowShadow}"></div>
+                                        </div>
+                                        <div class="radar-blip-info">
+                                            <span class="radar-blip-venue">${b.venue}</span>
+                                            <span class="radar-blip-status">${b.status} // ${vb}% density</span>
+                                        </div>
+                                    </div>`;
+                                }).join('')}
+                            </div>
+                            <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-top: 14px;">${r.insider_take}</div>
+                        </div>
+                    `;
+                }).join('')}
+            `;
+        }
+
+        async function generateRadarReport() {
+            const btn = $('radarReportBtn');
+            const city = $('radarReportCitySelect')?.value || state.radarCity || 'Toronto';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating…';
+            }
+            state.radarReportGenerating = true;
+            showToast('Generating radar report for ' + city + '…');
+
+            // Fire and forget — runs in background
+            api.post('/api/radar/report', { city }).then(report => {
+                state.radarReports = [report, ...(state.radarReports || [])];
+                state.radarReportGenerating = false;
+                showToast('Radar report ready — ' + city);
+                // Re-render whatever view is active
+                if (state.view === 'radar') renderRadar();
+                if (state.view === 'dashboard') renderDashboard();
+            }).catch(e => {
+                state.radarReportGenerating = false;
+                showToast('Report failed: ' + (e.message || 'unknown error'));
+                if (state.view === 'radar') {
+                    const b = $('radarReportBtn');
+                    if (b) { b.disabled = false; b.innerHTML = '<i class="fa-solid fa-bolt"></i> Generate Report'; }
+                }
+            });
+        }
+
         function renderRadar() {
             const view = $('dynamicView');
             const updates = state.radarUpdates || [];
@@ -8000,12 +9105,18 @@
             const selectedCity = state.radarCity || 'Toronto';
             const savedPrompts = state.radarPrompts || [];
             const defaultPrompt = `Radar Check: What's happening in ${selectedCity} queer nightlife right now? Cover: new parties/events this week, venue buzz, scene shifts, any promoter or creator activity worth noting. Be specific — names, dates, venues. Skip anything you're not confident about.`;
+            const activeTab = state.radarTab || 'scanner';
             view.innerHTML = `
                 <div style="padding: 24px; max-width: 800px; margin: 0 auto;">
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
                         <h2 style="font-size: 20px; font-weight: 700;"><i class="fa-solid fa-satellite-dish" style="margin-right: 8px; color: var(--accent);"></i>Nightlife Radar</h2>
                         <button class="btn-chat-action" onclick="refreshRadar()"><i class="fa-solid fa-rotate"></i> Refresh</button>
                     </div>
+                    <div class="radar-tab-strip">
+                        <div class="radar-tab ${activeTab === 'scanner' ? 'active' : ''}" onclick="state.radarTab='scanner'; renderRadar();">Scanner</div>
+                        <div class="radar-tab ${activeTab === 'report' ? 'active' : ''}" onclick="state.radarTab='report'; renderRadar();">Dashboard Report</div>
+                    </div>
+                    ${activeTab === 'report' ? buildRadarReportView() : `
                     <div style="background: var(--surface); border-radius: 12px; padding: 16px; margin-bottom: 20px; border: 1px solid var(--border);">
                         <div style="display: flex; gap: 10px; margin-bottom: 12px; align-items: center; flex-wrap: wrap;">
                             <select id="radarCitySelect" onchange="state.radarCity = this.value; renderRadar();" style="background: var(--bg); color: var(--text-primary); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; flex-shrink: 0;">
@@ -8051,6 +9162,7 @@
                             </div>
                         `;
                     }).join('')}
+                    `}
                 </div>
             `;
         }
@@ -8132,7 +9244,12 @@
 
         async function refreshRadar() {
             try {
-                state.radarUpdates = await api.get('/api/radar');
+                const [updates, reports] = await Promise.all([
+                    api.get('/api/radar'),
+                    api.get('/api/radar/reports')
+                ]);
+                state.radarUpdates = updates;
+                state.radarReports = reports;
                 renderRadar();
                 showToast('Radar refreshed');
             } catch (e) {
@@ -8372,7 +9489,7 @@
                 const tags = (doc.tags || []).join(' ');
                 if ((title + ' ' + content + ' ' + tags + ' ' + (doc.folder || '')).toLowerCase().includes(q)) {
                     results.push({ type: 'doc', title: title, meta: `${doc.folder || 'General'} · ${doc.company || ''}`, id: doc.id,
-                        action: () => { closeGlobalSearch(); state.view = 'docs'; localStorage.setItem('cc_current_view', 'docs'); document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=docs]')?.classList.add('active'); const agenda = document.querySelector('.agenda-container'); agenda.style.display = 'none'; $('mainContent').style.gridTemplateRows = '0px auto 1fr'; renderDocs(); openDocViewer(doc.id); }
+                        action: () => { closeGlobalSearch(); state.view = 'docs'; localStorage.setItem('cc_current_view', 'docs'); document.body.dataset.currentView = 'docs'; document.querySelector('.nav-icon.active')?.classList.remove('active'); document.querySelector('[data-view=docs]')?.classList.add('active'); const agenda = document.querySelector('.agenda-container'); agenda.style.display = 'none'; $('mainContent').style.gridTemplateRows = '0px auto 1fr'; renderDocs(); openDocViewer(doc.id); }
                     });
                 }
             });
@@ -8554,6 +9671,7 @@
                 const savedIcon = document.querySelector(`[data-view="${savedView}"]`);
                 if (savedIcon) savedIcon.classList.add('active');
             }
+            document.body.dataset.currentView = state.view;
 
             renderSidebar();
             // Render the correct view
@@ -8598,6 +9716,7 @@
                     setTimeout(() => icon.classList.remove('nav-ping'), 400);
                     state.view = icon.dataset.view;
                     localStorage.setItem('cc_current_view', state.view);
+                    document.body.dataset.currentView = state.view;
                     // Clear previous view immediately to prevent flash
                     const dv = $('dynamicView');
                     dv.classList.remove('view-enter');
