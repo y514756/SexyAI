@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>AI Command Center | Mission Control</title>
     <!-- PWA -->
     <meta name="theme-color" content="#0F0F14">
@@ -2021,7 +2021,7 @@
                 flex-direction: column !important;
                 height: 100% !important;
                 overflow: hidden !important;
-                padding-bottom: 56px !important;
+                padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
             }
 
             /* --- ICON RAIL: bottom tab bar --- */
@@ -2031,29 +2031,30 @@
                 left: 0;
                 right: 0;
                 width: 100% !important;
-                height: 56px;
+                height: calc(56px + env(safe-area-inset-bottom, 0px));
                 flex-direction: row;
-                align-items: center;
+                align-items: flex-start;
                 justify-content: space-evenly;
                 border-right: none;
                 border-top: var(--border);
-                padding: 0 12px;
+                padding: 8px 12px env(safe-area-inset-bottom, 0px) 12px;
                 z-index: 500;
                 background: var(--surface-inset);
                 flex-shrink: 0;
                 overflow: hidden;
                 gap: 0;
+                box-sizing: border-box;
             }
 
             /* Logo: show as home button in bottom bar */
             .logo-container {
-                width: 30px;
-                height: 30px;
-                min-width: 30px;
+                width: 34px;
+                height: 34px;
+                min-width: 34px;
                 margin: 0 !important;
                 padding: 0 !important;
                 font-size: 14px;
-                border-radius: 7px;
+                border-radius: 8px;
                 flex-shrink: 0;
             }
 
@@ -2068,10 +2069,10 @@
 
             /* Show only primary nav icons on mobile, hide the rest */
             .nav-icon {
-                width: 36px;
-                height: 36px;
-                min-width: 36px;
-                font-size: 18px;
+                width: 40px;
+                height: 40px;
+                min-width: 40px;
+                font-size: 20px;
                 flex-shrink: 0;
             }
             .nav-icon[data-view="playbooks"],
@@ -2106,7 +2107,7 @@
             /* Mobile more menu */
             .mobile-more-menu {
                 position: fixed;
-                bottom: 56px;
+                bottom: calc(56px + env(safe-area-inset-bottom, 0px));
                 left: 0;
                 right: 0;
                 background: var(--surface);
