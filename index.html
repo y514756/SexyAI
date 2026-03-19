@@ -2182,6 +2182,9 @@
                 width: 100% !important;
                 height: 100% !important;
                 overflow: hidden !important;
+                padding-left: env(safe-area-inset-left, 0px);
+                padding-right: env(safe-area-inset-right, 0px);
+                box-sizing: border-box;
             }
 
             /* --- CHAT PANEL: full-screen overlay --- */
@@ -2231,7 +2234,8 @@
                 grid-column: 1 !important;
                 grid-row: 1 !important;
                 border-right: none;
-                padding: 12px 16px;
+                border-bottom: var(--border);
+                padding: 12px calc(16px + env(safe-area-inset-left, 0px)) 12px calc(16px + env(safe-area-inset-right, 0px));
                 max-height: 45vh;
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
