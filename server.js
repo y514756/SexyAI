@@ -1152,13 +1152,29 @@ For each story return: category, headline, primary entity, secondary entities, p
     const rawIntel = searchData.candidates[0].content.parts.filter(p => p.text).map(p => p.text).join('\n');
 
     // Extract grounding source URLs from metadata
-    const groundingChunks = searchData.candidates[0]?.groundingMetadata?.groundingChunks || [];
-    const sourceUrls = groundingChunks
-      .filter(c => c.web?.uri)
-      .map(c => ({ title: c.web.title || '', url: c.web.uri }));
-    const sourcesBlock = sourceUrls.length > 0
-      ? '\n\nSOURCE URLS (use these exact URLs for each blip):\n' + sourceUrls.map((s, i) => `${i + 1}. ${s.title} — ${s.url}`).join('\n')
-      : '';
+    // Try supportingSearchResults first (has real URLs), fall back to groundingChunks
+    const metadata = searchData.candidates[0]?.groundingMetadata || {};
+    const supportingResults = metadata.supportingSearchResults || [];
+    const groundingChunks = metadata.groundingChunks || [];
+    let sourceUrls = supportingResults
+      .filter(r => r.uri && !r.uri.includes('vertexaisearch.cloud.google.com'))
+      .map(r => ({ title: r.title || '', url: r.uri }));
+    if (sourceUrls.length === 0) {
+      sourceUrls = groundingChunks
+        .filter(c => c.web?.uri && !c.web.uri.includes('vertexaisearch.cloud.google.com'))
+        .map(c => ({ title: c.web.title || '', url: c.web.uri }));
+    }
+    // Also extract any real URLs from the raw text itself
+    const urlRegex = /https?:\/\/(?!vertexaisearch)[^\s"'<>\]]+/g;
+    const textUrls = (rawIntel.match(urlRegex) || []).map(u => ({ title: '', url: u.replace(/[.,;:)}\]]+$/, '') }));
+    // Merge: prefer grounding URLs, supplement with text URLs
+    const allUrls = [...sourceUrls];
+    textUrls.forEach(tu => {
+      if (!allUrls.some(u => u.url === tu.url)) allUrls.push(tu);
+    });
+    const sourcesBlock = allUrls.length > 0
+      ? '\n\nSOURCE URLS (use these exact URLs for each blip — do NOT use vertexaisearch redirect URLs):\n' + allUrls.map((s, i) => `${i + 1}. ${s.title ? s.title + ' — ' : ''}${s.url}`).join('\n')
+      : '\n\nNote: Extract source URLs directly from the article links mentioned in the raw intel above. Do NOT use vertexaisearch.cloud.google.com redirect URLs.';
 
     // --- PASS 2: FORMAT INTO STRUCTURED JSON ---
     const formatResponse = await fetch(
