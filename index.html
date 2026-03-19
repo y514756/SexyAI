@@ -518,6 +518,7 @@
         .mobile-priority-btns { display: none; }
         .mobile-priority-cycle { display: none; }
         .mobile-more-menu { display: none; }
+        .search-close-btn { display: none; }
         .agenda-input-row .btn-send {
             padding: 0 14px;
             flex-shrink: 0;
@@ -2008,9 +2009,13 @@
         @media (max-width: 768px) {
 
             /* --- PREVENT HORIZONTAL OVERFLOW & LAYOUT SHIFT --- */
+            *, *::before, *::after {
+                box-sizing: border-box !important;
+            }
             html, body {
                 overflow: hidden !important;
                 width: 100% !important;
+                max-width: 100vw !important;
                 height: 100% !important;
                 position: fixed;
                 top: 0; left: 0; right: 0; bottom: 0;
@@ -2186,16 +2191,23 @@
             /* --- CHAT PANEL: full-screen overlay --- */
             .mission-chat {
                 position: fixed !important;
-                top: 0;
+                top: env(safe-area-inset-top, 0px);
                 left: 0;
                 right: 0;
-                bottom: 56px;
+                bottom: calc(60px + env(safe-area-inset-bottom, 0px));
                 z-index: 450;
                 grid-column: 1 !important;
                 grid-row: 1 !important;
                 background: var(--bg);
                 border-left: none;
                 min-width: 0 !important;
+            }
+            /* Default to hidden on mobile — only show when toggled */
+            .main-content:not(.chat-closed) .mission-chat {
+                display: none;
+            }
+            .main-content.chat-open .mission-chat {
+                display: flex !important;
             }
 
             /* When chat-closed, the existing rule sets display:none, which is fine */
@@ -2318,6 +2330,17 @@
                 width: 100% !important;
                 max-width: 100% !important;
                 box-sizing: border-box !important;
+                overflow-x: hidden !important;
+            }
+            .dynamic-view > * {
+                max-width: 100% !important;
+                box-sizing: border-box !important;
+                overflow-x: hidden !important;
+            }
+            .dynamic-view div, .dynamic-view table, .dynamic-view pre {
+                max-width: 100% !important;
+                overflow-wrap: break-word;
+                word-break: break-word;
             }
 
             /* --- DASHBOARD GRID --- */
@@ -2504,6 +2527,22 @@
             }
             .search-kbd {
                 display: none;
+            }
+            .search-close-btn {
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                width: 36px;
+                height: 36px;
+                min-height: 0 !important;
+                border: none;
+                background: var(--surface-elevated);
+                color: var(--text-muted);
+                border-radius: 8px;
+                font-size: 16px;
+                cursor: pointer;
+                flex-shrink: 0;
+                padding: 0 !important;
             }
 
             /* --- TOAST: center bottom, full width --- */
@@ -3804,6 +3843,7 @@
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <input type="text" id="globalSearchInput" placeholder="Search everything..." oninput="runGlobalSearch(this.value)" autocomplete="off">
                 <span class="search-kbd">ESC</span>
+                <button class="search-close-btn" onclick="closeGlobalSearch()" title="Close"><i class="fa-solid fa-times"></i></button>
             </div>
             <div class="search-results" id="globalSearchResults">
                 <div class="search-results-empty">
@@ -8449,17 +8489,20 @@
             const btn = $('chatReopenBtn');
             if (show) {
                 main.classList.remove('chat-closed');
+                main.classList.add('chat-open');
                 btn.style.display = 'none';
             } else {
                 main.classList.add('chat-closed');
+                main.classList.remove('chat-open');
                 btn.style.display = 'flex';
             }
             localStorage.setItem('cc_chat_closed', show ? '' : '1');
         };
 
         async function bootApp() {
-            // Restore chat panel state
-            if (localStorage.getItem('cc_chat_closed') === '1') {
+            // Restore chat panel state — default closed on mobile
+            const isMobile = window.innerWidth <= 768;
+            if (localStorage.getItem('cc_chat_closed') === '1' || isMobile) {
                 toggleChatPanel(false);
             }
 
