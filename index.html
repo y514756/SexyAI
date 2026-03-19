@@ -2016,12 +2016,16 @@
                 top: 0; left: 0; right: 0; bottom: 0;
             }
 
-            /* --- APP WRAPPER: stack vertically, leave room for bottom nav --- */
+            /* --- APP WRAPPER: stack vertically, leave room for nav + safe areas --- */
             #appWrapper {
                 flex-direction: column !important;
                 height: 100% !important;
                 overflow: hidden !important;
+                padding-top: env(safe-area-inset-top, 0px) !important;
+                padding-left: env(safe-area-inset-left, 0px) !important;
+                padding-right: env(safe-area-inset-right, 0px) !important;
                 padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
+                box-sizing: border-box !important;
             }
 
             /* --- ICON RAIL: bottom tab bar --- */
@@ -2031,13 +2035,13 @@
                 left: 0;
                 right: 0;
                 width: 100% !important;
-                height: calc(56px + env(safe-area-inset-bottom, 0px));
+                height: auto;
                 flex-direction: row;
-                align-items: flex-start;
+                align-items: center;
                 justify-content: space-evenly;
                 border-right: none;
                 border-top: var(--border);
-                padding: 8px 12px env(safe-area-inset-bottom, 0px) 12px;
+                padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px)) 12px;
                 z-index: 500;
                 background: var(--surface-inset);
                 flex-shrink: 0;
