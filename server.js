@@ -51,6 +51,7 @@ app.use('/api/radar/scan', rateLimit({ windowMs: 60 * 1000, max: 5, message: { e
 app.use('/api/radar/report', rateLimit({ windowMs: 60 * 1000, max: 5, message: { error: 'Rate limit exceeded' } }));
 app.use('/api/radar/industry', rateLimit({ windowMs: 60 * 1000, max: 5, message: { error: 'Rate limit exceeded' } }));
 app.post('/api/radar/sandbox', rateLimit({ windowMs: 60 * 1000, max: 5, message: { error: 'Rate limit exceeded' } }));
+
 app.use('/api', rateLimit({ windowMs: 60 * 1000, max: 200, message: { error: 'Rate limit exceeded' } }));
 
 app.use(express.json({ limit: '10mb' }));
