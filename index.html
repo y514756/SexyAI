@@ -9163,7 +9163,7 @@
                 <div class="designer-step-card">
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
                         <span style="background: var(--accent); color: white; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0;">${idx + 1}</span>
-                        <input type="text" placeholder="Step Label" value="${s.label}" onchange="updateDesignerStep(${idx}, 'label', this.value)" style="flex: 1; border-width: 0 0 1px 0; border-radius: 0; padding: 4px 0; font-weight: 600;">
+                        <input type="text" placeholder="Step Label" value="${s.label}" oninput="updateDesignerStep(${idx}, 'label', this.value)" style="flex: 1; border-width: 0 0 1px 0; border-radius: 0; padding: 4px 0; font-weight: 600;">
                         <i class="fa-solid fa-circle-xmark" style="color: #EF4444; cursor: pointer; font-size: 16px;" onclick="removeDesignerStep(${idx})"></i>
                     </div>
                     <div class="doc-editor-wrap">
@@ -9200,6 +9200,14 @@
         };
 
         $('btnSavePlaybook').onclick = async () => {
+            // Sync step data from DOM before saving (in case oninput missed anything)
+            currentDesignerSteps.forEach((s, idx) => {
+                const labelEl = document.querySelector(`#designerSteps .designer-step-card:nth-child(${idx + 1}) input[type="text"]`);
+                const promptEl = $('pbStep' + idx);
+                if (labelEl) s.label = labelEl.value;
+                if (promptEl) s.prompt = promptEl.innerHTML;
+            });
+            const isEdit = !!editingPlaybookId;
             const pb = {
                 id: editingPlaybookId || ('pb-' + Date.now()),
                 name: $('pbName').value || 'Untitled Playbook',
@@ -9209,7 +9217,7 @@
                 steps: currentDesignerSteps.filter(s => s.label && s.prompt)
             };
             await api.post('/api/playbooks', pb);
-            if (editingPlaybookId) {
+            if (isEdit) {
                 const idx = state.playbooks.findIndex(p => p.id === editingPlaybookId);
                 if (idx !== -1) state.playbooks[idx] = pb;
             } else {
@@ -9219,7 +9227,7 @@
             closeModal('designerModal');
             renderPlaybooks();
             renderSidebar();
-            showToast(editingPlaybookId ? 'Playbook updated' : 'Playbook saved');
+            showToast(isEdit ? 'Playbook updated' : 'Playbook saved');
         };
 
         $('btnAutoArchitect').onclick = async () => {
