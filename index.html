@@ -7307,15 +7307,19 @@
             }
         };
 
-        // Collapse state — persistent in localStorage
-        const _collapseKey = 'cc_project_collapsed';
-        function getCollapsedSet() {
-            try { return new Set(JSON.parse(localStorage.getItem(_collapseKey) || '[]')); } catch { return new Set(); }
+        // Expand state — persistent in localStorage (default is collapsed)
+        const _expandKey = 'cc_project_expanded';
+        function getExpandedSet() {
+            try { return new Set(JSON.parse(localStorage.getItem(_expandKey) || '[]')); } catch { return new Set(); }
+        }
+        function setExpandedSet(set) {
+            localStorage.setItem(_expandKey, JSON.stringify([...set]));
         }
         function toggleCollapse(ideaId) {
-            const set = getCollapsedSet();
+            event.stopPropagation();
+            const set = getExpandedSet();
             if (set.has(ideaId)) set.delete(ideaId); else set.add(ideaId);
-            localStorage.setItem(_collapseKey, JSON.stringify([...set]));
+            setExpandedSet(set);
             const children = document.getElementById('children-' + ideaId);
             const icon = document.getElementById('toggle-icon-' + ideaId);
             if (children) children.classList.toggle('collapsed');
@@ -7362,9 +7366,9 @@
                 });
                 state.ideas.push(created);
                 // Ensure this item is expanded after adding
-                const set = getCollapsedSet();
-                set.delete(parentId);
-                localStorage.setItem(_collapseKey, JSON.stringify([...set]));
+                const set = getExpandedSet();
+                set.add(parentId);
+                setExpandedSet(set);
                 renderIdeas();
                 renderAgenda();
                 showToast('Subtask added');
@@ -7421,12 +7425,12 @@
                 const doneItems = items.filter(i => i.status === 'done').length + allChildren.filter(s => s.status === 'done').length;
                 const donePercent = totalItems > 0 ? Math.round((doneItems / totalItems) * 100) : 0;
 
-                const collapsedSet = getCollapsedSet();
+                const expandedSet = getExpandedSet();
                 const itemsHtml = items.map(idea => {
                     const children = subtaskMap[idea.id] || [];
                     const statusColor = STATUS_COLORS[idea.status] || '#6366F1';
                     const isDone = idea.status === 'done';
-                    const isCollapsed = collapsedSet.has(idea.id);
+                    const isExpanded = expandedSet.has(idea.id);
                     const depTitles = (idea.depends_on || [])
                         .map(depId => state.ideas.find(i => i.id === depId))
                         .filter(Boolean)
@@ -7467,10 +7471,10 @@
                             </div>` : ''}
                         ${hasChildren ? `
                             <div class="project-item-toggle" onclick="toggleCollapse('${idea.id}')">
-                                <i id="toggle-icon-${idea.id}" class="fa-solid fa-chevron-right ${isCollapsed ? '' : 'expanded'}"></i>
+                                <i id="toggle-icon-${idea.id}" class="fa-solid fa-chevron-right ${isExpanded ? 'expanded' : ''}"></i>
                                 <span>${children.length} subtask${children.length !== 1 ? 's' : ''}</span>
                             </div>` : ''}
-                        <div id="children-${idea.id}" class="project-children ${isCollapsed ? 'collapsed' : ''}">
+                        <div id="children-${idea.id}" class="project-children ${isExpanded ? '' : 'collapsed'}">
                             ${childrenHtml}
                             <div id="subtask-add-${idea.id}">
                                 <div class="project-add-subtask" onclick="event.stopPropagation(); showSubtaskInput('${idea.id}');">
