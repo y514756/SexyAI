@@ -1833,6 +1833,69 @@
         .idea-color-swatch:hover { transform: scale(1.15); }
         .idea-color-swatch.active { border-color: white; box-shadow: 0 0 0 2px var(--accent); }
 
+        /* Project List View */
+        .project-group {
+            background: var(--surface); border: var(--border); border-radius: var(--radius);
+            margin-bottom: 16px; overflow: hidden;
+        }
+        .project-group-header {
+            padding: 14px 18px; border-bottom: var(--border); display: flex;
+            align-items: center; justify-content: space-between; gap: 12px;
+        }
+        .project-group-title {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 15px; font-weight: 700; min-width: 0;
+        }
+        .project-group-count {
+            font-size: 11px; padding: 2px 8px; border-radius: 10px;
+            background: var(--surface-elevated); color: var(--text-muted); flex-shrink: 0;
+        }
+        .project-group-progress {
+            width: 120px; height: 4px; background: var(--surface-inset, rgba(255,255,255,0.05));
+            border-radius: 2px; overflow: hidden; flex-shrink: 0;
+        }
+        .project-group-progress-bar {
+            height: 100%; background: #10B981; border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+        .project-group-items { padding: 4px 0; }
+        .project-item {
+            display: flex; align-items: flex-start; gap: 12px; padding: 10px 18px;
+            cursor: pointer; transition: var(--transition); flex-wrap: wrap;
+        }
+        .project-item:hover { background: var(--surface-elevated); }
+        .project-item-status {
+            width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px;
+        }
+        .project-item-title {
+            font-size: 14px; font-weight: 500; flex: 1; min-width: 0;
+        }
+        .project-item-meta {
+            display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+        }
+        .project-item-deps {
+            width: 100%; font-size: 11px; color: var(--text-dim); display: flex;
+            align-items: center; gap: 4px; padding-left: 20px; margin-top: -4px;
+        }
+        .project-subtask {
+            display: flex; align-items: center; gap: 10px;
+            padding: 6px 18px 6px 44px; font-size: 13px;
+        }
+        .project-subtask:hover { background: var(--surface-elevated); }
+        .project-subtask input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
+        .project-subtask-title { flex: 1; min-width: 0; }
+        .project-subtask-title.done { text-decoration: line-through; opacity: 0.5; }
+        .project-subtask-status {
+            font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .project-add-subtask {
+            display: flex; align-items: center; gap: 6px; padding: 6px 18px 10px 44px;
+            font-size: 12px; color: var(--text-dim); cursor: pointer; opacity: 0.6;
+            transition: var(--transition);
+        }
+        .project-add-subtask:hover { opacity: 1; color: var(--accent); }
+
         /* Global Search */
         .search-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);
@@ -3914,6 +3977,19 @@
                     <label>Workstation</label>
                     <select id="ideaCompanyInput"></select>
                 </div>
+                <div style="display: flex; gap: 12px;">
+                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                        <label>Parent Item</label>
+                        <select id="ideaParentInput">
+                            <option value="">None (top-level)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                        <label>Depends On</label>
+                        <select id="ideaDependsOnInput" multiple style="min-height: 56px; font-size: 12px;">
+                        </select>
+                    </div>
+                </div>
                 <div>
                     <label style="margin-bottom: 8px;">Color</label>
                     <div class="idea-color-swatches" id="ideaColorSwatches"></div>
@@ -4407,6 +4483,7 @@
             crmCityFilter: 'all',
             editingContact: null,
             crmViewMode: 'pipeline',
+            ideasViewMode: 'kanban',
             recurringTasks: [],
             recurringCompletions: [],
             plannerWeekOffset: 0,
@@ -5340,7 +5417,7 @@
                         <div class="dash-section">
                             <div class="dash-section-title"><i class="fa-solid fa-rocket" style="color: #10B981;"></i> Product Board</div>
                             ${(() => {
-                                const actionable = state.ideas.filter(i => i.status === 'actionable');
+                                const actionable = state.ideas.filter(i => i.status === 'actionable' && !i.parent_id);
                                 if (actionable.length === 0) return '<div style="color: var(--text-dim); font-size: 14px; padding: 8px 0;">No actionable items. Move ideas to Actionable.</div>';
                                 // Group by project
                                 const byProject = {};
@@ -5350,7 +5427,10 @@
                                     byProject[proj].push(i);
                                 });
                                 return Object.entries(byProject).map(([proj, items]) => {
-                                    const projectLabel = proj !== 'No Project' ? `<div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); margin: 8px 0 4px; padding-left: 2px;">${proj}</div>` : '';
+                                    const projSubtasks = state.ideas.filter(i => i.parent_id && (i.project || 'No Project') === proj);
+                                    const doneSubtasks = projSubtasks.filter(i => i.status === 'done').length;
+                                    const subtaskProgress = projSubtasks.length > 0 ? `<span style="font-size: 10px; color: var(--text-dim); margin-left: 6px;">${doneSubtasks}/${projSubtasks.length} subtasks</span>` : '';
+                                    const projectLabel = proj !== 'No Project' ? `<div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); margin: 8px 0 4px; padding-left: 2px;">${proj}${subtaskProgress}</div>` : '';
                                     const itemsHtml = items.slice(0, 5).map(i => {
                                         const color = i.color || '#10B981';
                                         const ws = i.company ? state.companies.find(c => c.name === i.company) : null;
@@ -7157,8 +7237,161 @@
             await onIdeaDrop({ preventDefault(){}, stopPropagation(){}, dataTransfer: { getData() { return id; } } }, newStatus);
         }
 
+        const STATUS_COLORS = { spark: '#F59E0B', exploring: '#6366F1', actionable: '#10B981', done: '#8B5CF6' };
+
+        const toggleSubtaskDone = async (id) => {
+            const idea = state.ideas.find(i => i.id === id);
+            if (!idea) return;
+            const newStatus = idea.status === 'done' ? 'actionable' : 'done';
+            try {
+                const updated = await api.patch(`/api/ideas/${id}`, { status: newStatus });
+                const idx = state.ideas.findIndex(i => i.id === id);
+                if (idx !== -1) state.ideas[idx] = { ...state.ideas[idx], ...updated };
+                renderIdeas();
+                renderAgenda();
+                renderSidebar();
+            } catch (err) {
+                showToast('Failed to update subtask');
+            }
+        };
+
+        const addSubtask = async (parentId) => {
+            const parent = state.ideas.find(i => i.id === parentId);
+            if (!parent) return;
+            const title = prompt('Subtask title:');
+            if (!title || !title.trim()) return;
+            try {
+                const created = await api.post('/api/ideas', {
+                    title: title.trim(),
+                    status: 'actionable',
+                    project: parent.project || '',
+                    company: parent.company || '',
+                    color: parent.color || '#6366F1',
+                    parent_id: parentId
+                });
+                state.ideas.push(created);
+                renderIdeas();
+                renderAgenda();
+                showToast('Subtask added');
+            } catch (err) {
+                showToast('Failed to add subtask');
+            }
+        };
+
+        const renderProjectListView = (all, done) => {
+            const allWithDone = [...all, ...done];
+            const parents = allWithDone.filter(i => !i.parent_id);
+            const subtasks = allWithDone.filter(i => i.parent_id);
+
+            // Build subtask map
+            const subtaskMap = {};
+            subtasks.forEach(s => {
+                if (!subtaskMap[s.parent_id]) subtaskMap[s.parent_id] = [];
+                subtaskMap[s.parent_id].push(s);
+            });
+
+            // Group parents by project
+            const byProject = {};
+            parents.forEach(i => {
+                const proj = i.project || 'Ungrouped';
+                if (!byProject[proj]) byProject[proj] = [];
+                byProject[proj].push(i);
+            });
+
+            // Also count orphan subtasks (parent not in current filtered set)
+            subtasks.forEach(s => {
+                if (!parents.find(p => p.id === s.parent_id)) {
+                    const proj = s.project || 'Ungrouped';
+                    if (!byProject[proj]) byProject[proj] = [];
+                    // Don't double-add, just ensure they appear
+                }
+            });
+
+            const projectEntries = Object.entries(byProject).sort((a, b) => {
+                if (a[0] === 'Ungrouped') return 1;
+                if (b[0] === 'Ungrouped') return -1;
+                return a[0].localeCompare(b[0]);
+            });
+
+            if (projectEntries.length === 0) {
+                return '<div style="text-align: center; color: var(--text-dim); font-size: 14px; padding: 40px 0;">No items yet. Add one above.</div>';
+            }
+
+            return projectEntries.map(([proj, items]) => {
+                const allChildren = items.flatMap(i => subtaskMap[i.id] || []);
+                const totalItems = items.length + allChildren.length;
+                const doneItems = items.filter(i => i.status === 'done').length + allChildren.filter(s => s.status === 'done').length;
+                const donePercent = totalItems > 0 ? Math.round((doneItems / totalItems) * 100) : 0;
+
+                const itemsHtml = items.map(idea => {
+                    const children = subtaskMap[idea.id] || [];
+                    const statusColor = STATUS_COLORS[idea.status] || '#6366F1';
+                    const depTitles = (idea.depends_on || [])
+                        .map(depId => state.ideas.find(i => i.id === depId))
+                        .filter(Boolean)
+                        .map(dep => dep.title);
+
+                    const childrenHtml = children.map(sub => {
+                        const subStatusColor = STATUS_COLORS[sub.status] || '#6366F1';
+                        return `
+                            <div class="project-subtask">
+                                <input type="checkbox" ${sub.status === 'done' ? 'checked' : ''}
+                                    onchange="event.stopPropagation(); toggleSubtaskDone('${sub.id}');"
+                                    onclick="event.stopPropagation();">
+                                <span class="project-subtask-title ${sub.status === 'done' ? 'done' : ''}"
+                                    onclick="openIdeaEditor('${sub.id}')" style="cursor:pointer;">${sub.title}</span>
+                                <span class="project-subtask-status" style="background: ${subStatusColor}22; color: ${subStatusColor};">${IDEA_STATUS_LABELS[sub.status] || sub.status}</span>
+                            </div>`;
+                    }).join('');
+
+                    return `
+                        <div class="project-item" onclick="openIdeaEditor('${idea.id}')">
+                            <div class="project-item-status" style="background: ${statusColor};"></div>
+                            <div class="project-item-title">${idea.title}</div>
+                            <div class="project-item-meta">
+                                <span class="project-subtask-status" style="background: ${statusColor}22; color: ${statusColor};">${IDEA_STATUS_LABELS[idea.status] || idea.status}</span>
+                                ${idea.category ? `<span class="doc-tag" style="font-size: 11px;">${idea.category}</span>` : ''}
+                                ${idea.company ? `<span class="doc-tag" style="font-size: 11px;">${idea.company}</span>` : ''}
+                                ${children.length > 0 ? `<span style="font-size: 11px; color: var(--text-dim);"><i class="fa-solid fa-list-check" style="margin-right: 3px;"></i>${children.filter(c => c.status === 'done').length}/${children.length}</span>` : ''}
+                            </div>
+                        </div>
+                        ${depTitles.length > 0 ? `
+                            <div class="project-item-deps">
+                                <i class="fa-solid fa-link" style="color: #EF4444;"></i>
+                                Depends on: ${depTitles.join(', ')}
+                            </div>` : ''}
+                        ${childrenHtml}
+                        <div class="project-add-subtask" onclick="event.stopPropagation(); addSubtask('${idea.id}');">
+                            <i class="fa-solid fa-plus"></i> Add subtask
+                        </div>`;
+                }).join('');
+
+                return `
+                    <div class="project-group">
+                        <div class="project-group-header">
+                            <div class="project-group-title">
+                                <i class="fa-solid fa-folder" style="color: var(--accent);"></i>
+                                <span>${proj}</span>
+                                <span class="project-group-count">${totalItems} item${totalItems !== 1 ? 's' : ''}</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="font-size: 11px; color: var(--text-dim);">${donePercent}%</span>
+                                <div class="project-group-progress">
+                                    <div class="project-group-progress-bar" style="width: ${donePercent}%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="project-group-items">
+                            ${itemsHtml}
+                        </div>
+                    </div>`;
+            }).join('');
+        };
+
         const renderIdeaCard = (idea) => {
             const color = idea.color || '#6366F1';
+            const subtaskCount = state.ideas.filter(i => i.parent_id === idea.id).length;
+            const doneSubtaskCount = state.ideas.filter(i => i.parent_id === idea.id && i.status === 'done').length;
             return `
                 <div class="idea-card" onclick="openIdeaEditor('${idea.id}')"
                     draggable="true" data-idea-id="${idea.id}"
@@ -7173,6 +7406,9 @@
                         ${idea.category ? `<span class="doc-tag">${idea.category}</span>` : ''}
                         ${idea.company ? `<span class="doc-tag" style="font-size: 11px;">${idea.company}</span>` : ''}
                     </div>
+                    ${subtaskCount > 0 ? `<div style="font-size: 11px; color: var(--text-dim); margin-top: 6px; display: flex; align-items: center; gap: 4px;">
+                        <i class="fa-solid fa-list-check"></i> ${doneSubtaskCount}/${subtaskCount} subtasks
+                    </div>` : ''}
                     <select class="idea-mobile-move" onclick="event.stopPropagation()" onchange="moveIdeaToStatus('${idea.id}', this.value); this.value='${idea.status}';">
                         <option value="${idea.status}">Move to...</option>
                         ${['spark','exploring','actionable','done'].filter(s => s !== idea.status).map(s => `<option value="${s}">${{spark:'Spark',exploring:'Exploring',actionable:'Actionable',done:'Done'}[s]}</option>`).join('')}
@@ -7230,7 +7466,13 @@
 
             let html = `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <h1 style="font-size: 24px; font-weight: 700;">Product Board</h1>
+                    <div style="display: flex; align-items: center; gap: 14px;">
+                        <h1 style="font-size: 24px; font-weight: 700;">Product Board</h1>
+                        <div class="crm-view-toggle">
+                            <button class="${state.ideasViewMode === 'kanban' ? 'active' : ''}" onclick="state.ideasViewMode='kanban'; renderIdeas();" title="Kanban"><i class="fa-solid fa-columns"></i></button>
+                            <button class="${state.ideasViewMode === 'projects' ? 'active' : ''}" onclick="state.ideasViewMode='projects'; renderIdeas();" title="Projects"><i class="fa-solid fa-list"></i></button>
+                        </div>
+                    </div>
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <input type="text" placeholder="Search..." value="${state.ideaSearch}"
                             oninput="state.ideaSearch=this.value; renderIdeas();"
@@ -7262,8 +7504,11 @@
                     <button class="btn-send" onclick="quickAddIdea()" style="padding: 8px 16px;">Add</button>
                 </div>
 
+                ${state.ideasViewMode === 'kanban' ? `
                 <div class="idea-pipeline">
-                    ${columns.map(col => `
+                    ${columns.map(col => {
+                        const colItems = col.items.filter(i => !i.parent_id);
+                        return `
                         <div class="idea-column stagger-col" data-status="${col.key}"
                             ondragover="event.preventDefault(); this.style.outline='2px solid var(--accent)';"
                             ondragleave="this.style.outline='';"
@@ -7273,18 +7518,19 @@
                                     <i class="fa-solid ${col.icon}" style="color: ${col.color};"></i>
                                     ${col.label}
                                 </div>
-                                <span class="idea-column-count">${col.items.length}</span>
+                                <span class="idea-column-count">${colItems.length}</span>
                             </div>
                             <div class="idea-column-cards"
                                 ondragover="event.preventDefault();"
                                 ondrop="onIdeaDrop(event, '${col.key}'); this.parentElement.style.outline='';">
-                                ${col.items.length === 0
+                                ${colItems.length === 0
                                     ? `<div style="text-align: center; color: var(--text-dim); font-size: 13px; padding: 20px 0; opacity: 0.6;">Drop items here</div>`
-                                    : col.items.map(renderIdeaCard).join('')}
+                                    : colItems.map(renderIdeaCard).join('')}
                             </div>
                         </div>
-                    `).join('')}
+                    `;}).join('')}
                 </div>
+                ` : renderProjectListView(all, done)}
             `;
 
             // Archived (Done) section
@@ -7395,6 +7641,18 @@
             const projects = [...new Set(state.ideas.map(i => i.project).filter(Boolean))];
             $('ideaProjectList').innerHTML = projects.map(p => `<option value="${p}">`).join('');
 
+            // Parent select: top-level ideas except current and its children
+            const parentOptions = state.ideas
+                .filter(i => !i.parent_id && (!idea || i.id !== idea.id))
+                .map(i => `<option value="${i.id}" ${idea && idea.parent_id === i.id ? 'selected' : ''}>${i.title}${i.project ? ' [' + i.project + ']' : ''}</option>`);
+            $('ideaParentInput').innerHTML = '<option value="">None (top-level)</option>' + parentOptions.join('');
+
+            // Depends-on multi-select
+            const depOptions = state.ideas
+                .filter(i => !idea || i.id !== idea.id)
+                .map(i => `<option value="${i.id}" ${idea && idea.depends_on && idea.depends_on.includes(i.id) ? 'selected' : ''}>${i.title}${i.project ? ' [' + i.project + ']' : ''}</option>`);
+            $('ideaDependsOnInput').innerHTML = depOptions.join('');
+
             // Color swatches
             $('ideaColorSwatches').innerHTML = IDEA_COLORS.map(c =>
                 `<div class="idea-color-swatch ${state.editingIdeaColor === c ? 'active' : ''}" style="background:${c};" onclick="pickIdeaColor('${c}')"></div>`
@@ -7427,7 +7685,9 @@
                 project: $('ideaProjectInput').value.trim() || '',
                 version: $('ideaVersionInput').value.trim() || '',
                 color: state.editingIdeaColor,
-                pinned: state.editingIdea ? state.editingIdea.pinned : false
+                pinned: state.editingIdea ? state.editingIdea.pinned : false,
+                parent_id: $('ideaParentInput').value || null,
+                depends_on: Array.from($('ideaDependsOnInput').selectedOptions).map(o => o.value)
             };
             try {
                 const prevStatus = state.editingIdea ? state.editingIdea.status : null;
@@ -7463,10 +7723,11 @@
 
         const deleteCurrentIdea = async () => {
             if (!state.editingIdea) return;
+            const childCount = state.ideas.filter(i => i.parent_id === state.editingIdea.id).length;
             if (!state._ideaDeleteArmed || state._ideaDeleteArmedId !== state.editingIdea.id) {
                 state._ideaDeleteArmed = true;
                 state._ideaDeleteArmedId = state.editingIdea.id;
-                showToast('Click delete again to confirm');
+                showToast(childCount > 0 ? `This will also delete ${childCount} subtask${childCount > 1 ? 's' : ''}. Click delete again to confirm.` : 'Click delete again to confirm');
                 setTimeout(() => { state._ideaDeleteArmed = false; state._ideaDeleteArmedId = null; }, 3000);
                 return;
             }
@@ -7474,7 +7735,7 @@
             state._ideaDeleteArmedId = null;
             try {
                 await api.del(`/api/ideas/${state.editingIdea.id}`);
-                state.ideas = state.ideas.filter(i => i.id !== state.editingIdea.id);
+                state.ideas = state.ideas.filter(i => i.id !== state.editingIdea.id && i.parent_id !== state.editingIdea.id);
                 closeModal('ideaEditorModal');
                 renderIdeas();
                 renderSidebar();
@@ -7852,7 +8113,11 @@
 
             const actionableIdeas = state.ideas
                 .filter(i => i.status === 'actionable')
-                .map(i => ({ id: i.id, text: i.title, priority: 'normal', done: false, isRecurring: false, isIdea: true, company: i.company }));
+                .map(i => ({
+                    id: i.id, text: i.title, priority: 'normal', done: false, isRecurring: false, isIdea: true, company: i.company,
+                    isSubtask: !!i.parent_id,
+                    parentTitle: i.parent_id ? (state.ideas.find(p => p.id === i.parent_id)?.title || '') : ''
+                }));
 
             const allTasks = [
                 ...state.tasks.map(t => ({ ...t, isRecurring: false, isIdea: false })),
@@ -7887,12 +8152,12 @@
             list.innerHTML = sorted.map(t => {
                 if (t.isIdea) {
                     return `
-                <div class="task-item">
+                <div class="task-item" style="${t.isSubtask ? 'padding-left: 28px;' : ''}">
                     <input type="checkbox" class="task-check" onchange="completeActionableIdea('${t.id}')">
                     <div class="task-priority-dot normal"></div>
                     <div class="task-content" style="flex:1;min-width:0;">
                         <div class="task-text">${t.text}</div>
-                        <div style="font-size:12px;color:#10B981;font-weight:600;opacity:0.6;margin-top:2px;display:flex;align-items:center;gap:4px;"><i class="fa-solid fa-rocket" style="font-size:10px;"></i>Actionable${t.company ? ' — ' + t.company : ''}</div>
+                        <div style="font-size:12px;color:#10B981;font-weight:600;opacity:0.6;margin-top:2px;display:flex;align-items:center;gap:4px;"><i class="fa-solid fa-rocket" style="font-size:10px;"></i>${t.isSubtask ? 'Subtask of ' + t.parentTitle : 'Actionable'}${t.company ? ' — ' + t.company : ''}</div>
                     </div>
                 </div>`;
                 }

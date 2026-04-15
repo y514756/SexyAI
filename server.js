@@ -688,10 +688,10 @@ app.get('/api/ideas', async (req, res) => {
 });
 
 app.post('/api/ideas', async (req, res) => {
-  const { title, body, color, category, status, company, pinned, project, version } = req.body;
+  const { title, body, color, category, status, company, pinned, project, version, parent_id, depends_on } = req.body;
   const { data, error } = await supabase
     .from('ideas')
-    .insert({ title, body, color, category, status, company, pinned, project, version })
+    .insert({ title, body, color, category, status, company, pinned, project, version, parent_id, depends_on })
     .select()
     .single();
   if (error) return res.status(500).json({ error: error.message });
@@ -699,8 +699,8 @@ app.post('/api/ideas', async (req, res) => {
 });
 
 app.patch('/api/ideas/:id', async (req, res) => {
-  const { title, body, color, category, status, company, pinned, project, version } = req.body;
-  const updates = Object.fromEntries(Object.entries({ title, body, color, category, status, company, pinned, project, version }).filter(([, v]) => v !== undefined));
+  const { title, body, color, category, status, company, pinned, project, version, parent_id, depends_on } = req.body;
+  const updates = Object.fromEntries(Object.entries({ title, body, color, category, status, company, pinned, project, version, parent_id, depends_on }).filter(([, v]) => v !== undefined));
   const { data, error } = await supabase
     .from('ideas')
     .update(updates)
