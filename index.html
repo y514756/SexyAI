@@ -4176,15 +4176,15 @@
                 <div id="crmVenueFields" style="display: flex; gap: 12px;">
                     <div class="form-group" style="flex: 1; margin-bottom: 0;">
                         <label>Venue Type</label>
-                        <select id="crmVenueTypeInput">
-                            <option value="">—</option>
-                            <option value="club">Club</option>
-                            <option value="bar">Bar</option>
-                            <option value="lounge">Lounge</option>
-                            <option value="warehouse">Warehouse</option>
-                            <option value="outdoor">Outdoor</option>
-                            <option value="pop-up">Pop-up</option>
-                        </select>
+                        <input type="text" id="crmVenueTypeInput" placeholder="e.g. Club, Bar, Artsy, Pop-up" list="crmVenueTypeList">
+                        <datalist id="crmVenueTypeList">
+                            <option value="Club">
+                            <option value="Bar">
+                            <option value="Lounge">
+                            <option value="Warehouse">
+                            <option value="Outdoor">
+                            <option value="Pop-up">
+                        </datalist>
                     </div>
                     <div class="form-group" style="flex: 1; margin-bottom: 0;">
                         <label>Capacity</label>
@@ -7964,10 +7964,11 @@
             return `
                 <div class="crm-card" onclick="openCrmEditor('${contact.id}')">
                     ${isOverdue ? '<div class="crm-overdue-dot" title="Overdue follow-up"></div>' : ''}
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
                         <span class="crm-type-badge" style="background: ${t.color}22; color: ${t.color};">
                             <i class="fa-solid ${t.icon}" style="margin-right: 3px;"></i> ${t.label}
                         </span>
+                        ${contact.venue_type ? `<span class="crm-city-tag" style="font-size: 10px;">${contact.venue_type}</span>` : ''}
                         ${contact.city ? `<span class="crm-city-tag">${contact.city}</span>` : ''}
                     </div>
                     <div class="crm-card-name">${contact.name}</div>
@@ -8003,7 +8004,9 @@
                     (c.instagram || '').toLowerCase().includes(q) ||
                     (c.city || '').toLowerCase().includes(q) ||
                     (c.notes || '').replace(/<[^>]*>/g, '').toLowerCase().includes(q) ||
-                    (c.email || '').toLowerCase().includes(q)
+                    (c.email || '').toLowerCase().includes(q) ||
+                    (c.venue_type || '').toLowerCase().includes(q) ||
+                    (c.type || '').toLowerCase().includes(q)
                 );
             }
 
@@ -8077,6 +8080,7 @@
                                             <span class="crm-type-badge" style="background: ${t.color}22; color: ${t.color}; font-size: 11px;">
                                                 <i class="fa-solid ${t.icon}" style="margin-right: 2px;"></i> ${t.label}
                                             </span>
+                                            ${c.venue_type ? `<span style="font-size: 10px; color: var(--text-dim); margin-left: 4px;">${c.venue_type}</span>` : ''}
                                         </div>
                                         <div class="crm-pb-cell">${c.city || '—'}</div>
                                         <div class="crm-pb-cell">${c.instagram ? '@' + c.instagram.replace(/^@/, '') : '—'}</div>
